@@ -1,0 +1,16 @@
+{
+  "name": "PEACE GapoWork",
+  "short_name": "PEACE Work",
+  "description": "Hệ thống Chấm công & Phê duyệt chuẩn GapoWork",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00BA74",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# environment & secrets (DO NOT COMMIT SENSITIVE DATA)
+.env
+.env*.local
+
+# internal logs & scratch docs
+/.agents/
+/*.log
+/Workflow
+ORIGINAL_REQUEST.md
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md
+Workflow.md
+
+# uploads (keep folder structure)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# misc
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# prisma sqlite journals
+prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal

@@ -1,0 +1,245 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String    @id @default(cuid())
+  employeeCode     String    @unique
+  name             String
+  email            String    @unique
+  passwordHash     String
+  phone            String?
+  avatarUrl        String?
+  role             String    @default("EMPLOYEE") // SUPER_ADMIN, HR_ADMIN, MANAGER, EMPLOYEE
+  position         String?   // Chức danh: Trưởng phòng, Chuyên viên, Nhân viên...
+  annualLeaveQuota Float     @default(12.0)
+  annualLeaveUsed  Float     @default(0.0)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  branchId         String?
+  branch           Branch?   @relation(fields: [branchId], references: [id])
+
+  departmentId     String?
+  department       Department? @relation("DepartmentUsers", fields: [departmentId], references: [id])
+
+  managerId        String?
+  manager          User?     @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates     User[]    @relation("ManagerSubordinates")
+
+  managedDepartments Department[] @relation("DepartmentManager")
+
+  attendances       Attendance[]
+  schedules         UserShiftSchedule[]
+  approvalRequests  ApprovalRequest[] @relation("CreatorRequests")
+  approvalSteps     ApprovalStep[]    @relation("ApproverSteps")
+  approvalComments  ApprovalComment[]
+  notifications     Notification[]
+}
+
+model Branch {
+  id           String       @id @default(cuid())
+  name         String
+  code         String       @unique
+  address      String
+  latitude     Float
+  longitude    Float
+  radiusMeters Float        @default(200.0) // Bán kính cho phép chấm công (m)
+  wifiBssids   String?      // Danh sách BSSID/IP wifi cách nhau bởi dấu phẩy
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  users        User[]
+  attendances  Attendance[]
+}
+
+model Department {
+  id          String        @id @default(cuid())
+  name        String
+  code        String        @unique
+  parentId    String?
+  parent      Department?   @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[]  @relation("DepartmentHierarchy")
+
+  managerId   String?
+  manager     User?         @relation("DepartmentManager", fields: [managerId], references: [id])
+
+  users       User[]        @relation("DepartmentUsers")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Shift {
+  id               String              @id @default(cuid())
+  name             String
+  code             String              @unique
+  startTime        String              // Định dạng "08:30"
+  endTime          String              // Định dạng "17:30"
+  breakStartTime   String?             // "12:00"
+  breakEndTime     String?             // "13:30"
+  gracePeriodLate  Int                 @default(15) // Cho phép muộn 15 phút
+  gracePeriodEarly Int                 @default(15) // Cho phép về sớm 15 phút
+  workUnits        Float               @default(1.0) // 1.0 công
+  isFlexible       Boolean             @default(false)
+  minWorkHours     Float               @default(8.0)
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  schedules        UserShiftSchedule[]
+  attendances      Attendance[]
+}
+
+model UserShiftSchedule {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shiftId   String
+  shift     Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  workDate  String   // "2026-09-05"
+  isOffDay  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, workDate])
+}
+
+model Attendance {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId           String?
+  branch             Branch?   @relation(fields: [branchId], references: [id])
+  shiftId            String?
+  shift              Shift?    @relation(fields: [shiftId], references: [id])
+  workDate           String    // "2026-09-05"
+
+  // Check-in details
+  checkInTime        DateTime?
+  checkInLat         Float?
+  checkInLng         Float?
+  checkInDistance    Float?
+  checkInPhotoUrl    String?
+  checkInIp          String?
+  checkInDevice      String?
+  checkInStatus      String?   // ON_TIME, LATE, INVALID_LOCATION, MANUAL
+
+  // Check-out details
+  checkOutTime       DateTime?
+  checkOutLat        Float?
+  checkOutLng        Float?
+  checkOutDistance   Float?
+  checkOutPhotoUrl   String?
+  checkOutIp         String?
+  checkOutDevice     String?
+  checkOutStatus     String?   // ON_TIME, EARLY, INVALID_LOCATION, MANUAL
+
+  // Calculated metrics
+  lateMinutes        Int       @default(0)
+  earlyMinutes       Int       @default(0)
+  workHours          Float     @default(0.0)
+  otHours            Float     @default(0.0)
+  calculatedWorkUnits Float    @default(0.0) // 1.0, 0.5, 0.0
+  status             String    @default("PRESENT") // PRESENT, LATE, EARLY, ABSENT, LEAVE, EXPLAINED
+  note               String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, workDate])
+}
+
+model ApprovalTemplate {
+  id               String            @id @default(cuid())
+  name             String
+  code             String            @unique // LEAVE, ADJUSTMENT, LATE_EARLY, OVERTIME, PAYMENT, CUSTOM
+  icon             String            @default("FileText")
+  description      String?
+  schemaFields     String            // JSON string mô tả các fields trong form
+  approvalFlowType String            @default("DIRECT_MANAGER") // DIRECT_MANAGER, FIXED_CHAIN, DYNAMIC
+  defaultSteps     String            // JSON string mô tả các step duyệt mặc định
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  requests         ApprovalRequest[]
+}
+
+model ApprovalRequest {
+  id                 String            @id @default(cuid())
+  code               String            @unique // REQ-202609-0001
+  templateId         String
+  template           ApprovalTemplate  @relation(fields: [templateId], references: [id])
+  creatorId          String
+  creator            User              @relation("CreatorRequests", fields: [creatorId], references: [id], onDelete: Cascade)
+  currentStep        Int               @default(1)
+  status             String            @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  data               String            // JSON string lưu trữ dữ liệu form gửi lên
+  linkedAttendanceId String?           // ID bản ghi chấm công nếu là đơn giải trình/bổ sung công
+  
+  // Thông tin số hóa từ Phiếu xác nhận ký tay (HR Offline Slip Digitization)
+  isDigitizedOffline   Boolean           @default(false)
+  signedByApproverId   String?           // ID Bác sĩ / Quản lý đã ký tay
+  signedByApproverName String?           // Tên Bác sĩ / Quản lý ký trên phiếu
+  paperSlipPhotoUrl    String?           // Base64 hoặc URL ảnh chụp/quét phiếu có chữ ký
+  paperSlipCode        String?           // Mã số phiếu giấy / Số lưu trữ hồ sơ
+  
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  steps              ApprovalStep[]
+  comments           ApprovalComment[]
+}
+
+model ApprovalStep {
+  id           String          @id @default(cuid())
+  requestId    String
+  request      ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  stepOrder    Int
+  approverId   String?
+  approver     User?           @relation("ApproverSteps", fields: [approverId], references: [id])
+  approverRole String?         // MANAGER, HR_ADMIN, SUPER_ADMIN
+  status       String          @default("PENDING") // PENDING, APPROVED, REJECTED
+  note         String?
+  signatureUrl String?
+  actedAt      DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model ApprovalComment {
+  id        String          @id @default(cuid())
+  requestId String
+  request   ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime        @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  link      String?
+  type      String   @default("INFO") // APPROVAL, ATTENDANCE, SYSTEM
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, logs, deviceId, deviceName } = body;
+    const { action, logs, deviceId, deviceName, rawText } = body;
 
     let punchLogs: Array<{
       employeeCode: string;
@@ -116,7 +116,47 @@ export async function POST(req: NextRequest) {
       deviceName?: string;
     }> = [];
 
-    if (action === 'sync_all' || action === 'simulate_sync' || !logs || logs.length === 0) {
+    // If rawText (CSV / DAT / TXT export from machine) is provided, parse it
+    if (rawText && typeof rawText === 'string') {
+      const lines = rawText.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#') || trimmed.toLowerCase().includes('employee') || trimmed.toLowerCase().includes('mã nv')) continue;
+
+        // Try tab, comma, semicolon, or space separation
+        const parts = trimmed.split(/[\t,;]+|\s{2,}/).map((p) => p.trim());
+        if (parts.length >= 2) {
+          const empCodeRaw = parts[0];
+          // Look for date-time in subsequent parts
+          let dateTimeStr = '';
+          if (parts[1] && parts[2] && (parts[1].includes('-') || parts[1].includes('/')) && parts[2].includes(':')) {
+            dateTimeStr = `${parts[1]} ${parts[2]}`;
+          } else if (parts[1]) {
+            dateTimeStr = parts[1];
+          }
+
+          if (empCodeRaw && dateTimeStr) {
+            // Normalize employee code (e.g., '1' -> 'NV001' if matching numeric ID)
+            let empCode = empCodeRaw;
+            if (/^\d+$/.test(empCodeRaw)) {
+              const num = parseInt(empCodeRaw, 10);
+              empCode = `NV${num.toString().padStart(3, '0')}`;
+            }
+
+            // Clean datetime string
+            const parsedDate = new Date(dateTimeStr.replace(/\//g, '-'));
+            if (!isNaN(parsedDate.getTime())) {
+              punchLogs.push({
+                employeeCode: empCode,
+                timestamp: parsedDate.toISOString(),
+                verifyType: 'FINGERPRINT',
+                deviceName: deviceName || 'File Máy Chấm Công (Import)',
+              });
+            }
+          }
+        }
+      }
+    } else if (action === 'sync_all' || action === 'simulate_sync' || !logs || logs.length === 0) {
       // Generate / pull latest fingerprint records from active users
       const allUsers = await prisma.user.findMany({
         where: { isActive: true },

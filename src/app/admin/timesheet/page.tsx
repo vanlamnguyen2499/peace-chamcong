@@ -52,6 +52,9 @@ export default function AdminTimesheetPage() {
   const [biometricInfo, setBiometricInfo] = useState<any>(null);
   const [syncingBiometric, setSyncingBiometric] = useState<boolean>(false);
   const [biometricSyncMsg, setBiometricSyncMsg] = useState<string | null>(null);
+  const [importTab, setImportTab] = useState<'file' | 'devices' | 'text'>('file');
+  const [rawTextLog, setRawTextLog] = useState<string>('');
+  const [importingLog, setImportingLog] = useState<boolean>(false);
 
   // Fetch filter options
   useEffect(() => {
@@ -203,6 +206,56 @@ export default function AdminTimesheetPage() {
     } finally {
       setSyncingBiometric(false);
     }
+  };
+
+  const handleImportRawText = async (textToImport: string) => {
+    if (!textToImport.trim()) {
+      setBiometricSyncMsg('❌ Vui lòng nhập hoặc chọn file chứa dữ liệu chấm công');
+      return;
+    }
+
+    setImportingLog(true);
+    setBiometricSyncMsg(null);
+
+    try {
+      const res = await fetch('/api/attendance/biometric', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText: textToImport,
+          deviceName: 'File Máy Chấm Công (Import)',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setBiometricSyncMsg(`✅ ${data.message} (${data.processedLogsCount} lượt quẹt thẻ)`);
+        setRawTextLog('');
+        await fetchBiometricInfo();
+        await fetchTimesheet();
+      } else {
+        setBiometricSyncMsg(`❌ ${data.error || 'Lỗi khi nhập dữ liệu file chấm công'}`);
+      }
+    } catch (err: any) {
+      setBiometricSyncMsg(`❌ ${err.message || 'Lỗi xử lý file'}`);
+    } finally {
+      setImportingLog(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        setRawTextLog(content);
+        handleImportRawText(content);
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Compute Grand Totals across all users
@@ -738,48 +791,148 @@ export default function AdminTimesheetPage() {
               </div>
             )}
 
-            {/* Hardware Terminals Status Grid */}
-            <div className="space-y-2.5">
-              <div className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
-                <span>Thiết bị Máy Vân Tay Đang Kết Nối ({biometricInfo?.devices?.length || 2} Thiết bị):</span>
-                <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Trực tuyến TCP/IP
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {(biometricInfo?.devices || [
-                  {
-                    name: 'Máy Vân Tay Cửa Chính - Chi Nhánh 1',
-                    brand: 'Ronald Jack Pro / ZKTeco SpeedFace',
-                    ip: '192.168.1.201:4370',
-                    status: 'CONNECTED',
-                    enrolledFingerprints: 128,
-                  },
-                  {
-                    name: 'Máy Vân Tay Phòng Điều Trị - Chi Nhánh 2',
-                    brand: 'Hikvision DS-K1T804 / Granding',
-                    ip: '192.168.2.201:4370',
-                    status: 'CONNECTED',
-                    enrolledFingerprints: 95,
-                  },
-                ]).map((dev: any, i: number) => (
-                  <div key={i} className="p-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-indigo-950">{dev.name}</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        {dev.status || 'CONNECTED'}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-600 space-y-0.5">
-                      <div>Hãng / Dòng máy: <strong>{dev.brand}</strong></div>
-                      <div>IP / Cổng: <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-700">{dev.ip}:{dev.port || 4370}</code></div>
-                      <div>Mẫu vân tay đã nạp: <strong>{dev.enrolledFingerprints || 120} mẫu</strong></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* Tab Navigation */}
+            <div className="flex border-b border-slate-200">
+              <button
+                type="button"
+                onClick={() => setImportTab('file')}
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                  importTab === 'file'
+                    ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                📁 Tải Lên File (Excel / CSV / DAT)
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportTab('devices')}
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                  importTab === 'devices'
+                    ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                🔌 Kết Nối Thiết Bị Máy Vân Tay ({biometricInfo?.devices?.length || 2})
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportTab('text')}
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                  importTab === 'text'
+                    ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                📝 Dán Dữ Liệu Log Trực Tiếp
+              </button>
             </div>
+
+            {/* TAB 1: FILE UPLOAD */}
+            {importTab === 'file' && (
+              <div className="space-y-3">
+                <div className="border-2 border-dashed border-indigo-200 bg-indigo-50/20 hover:bg-indigo-50/40 transition-colors rounded-2xl p-6 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto">
+                    <TableIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">
+                      Chọn file xuất từ phần mềm máy chấm công (.DAT, .CSV, .TXT, .XLSX)
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Hỗ trợ định dạng chuẩn từ Ronald Jack, ZKTeco, Wise Eye, Mitaco, AttLogs
+                    </p>
+                  </div>
+
+                  <label className="inline-block px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer shadow-md shadow-indigo-600/20">
+                    <span>{importingLog ? 'Đang đọc và import dữ liệu...' : 'Bấm Chọn File Chấm Công'}</span>
+                    <input
+                      type="file"
+                      accept=".csv,.dat,.txt,.xlsx,.xls"
+                      onChange={handleFileChange}
+                      disabled={importingLog}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
+                  <div className="font-bold text-slate-800">Cấu trúc dòng mẫu trong file:</div>
+                  <div className="font-mono bg-white p-1.5 rounded border border-slate-200 text-slate-700 text-[10px]">
+                    NV001, 2026-09-10 07:52:00<br />
+                    1 [tab] 2026-09-10 19:35:00 [tab] 1 [tab] 0 (Chuẩn máy Ronald Jack / ZKTeco)
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: DEVICES STATUS */}
+            {importTab === 'devices' && (
+              <div className="space-y-2.5">
+                <div className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
+                  <span>Thiết bị Máy Vân Tay Đang Kết Nối ({biometricInfo?.devices?.length || 2} Thiết bị):</span>
+                  <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Trực tuyến TCP/IP
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(biometricInfo?.devices || [
+                    {
+                      name: 'Máy Vân Tay Cửa Chính - Chi Nhánh 1',
+                      brand: 'Ronald Jack Pro / ZKTeco SpeedFace',
+                      ip: '192.168.1.201:4370',
+                      status: 'CONNECTED',
+                      enrolledFingerprints: 128,
+                    },
+                    {
+                      name: 'Máy Vân Tay Phòng Điều Trị - Chi Nhánh 2',
+                      brand: 'Hikvision DS-K1T804 / Granding',
+                      ip: '192.168.2.201:4370',
+                      status: 'CONNECTED',
+                      enrolledFingerprints: 95,
+                    },
+                  ]).map((dev: any, i: number) => (
+                    <div key={i} className="p-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-indigo-950">{dev.name}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                          {dev.status || 'CONNECTED'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 space-y-0.5">
+                        <div>Hãng / Dòng máy: <strong>{dev.brand}</strong></div>
+                        <div>IP / Cổng: <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-700">{dev.ip}:{dev.port || 4370}</code></div>
+                        <div>Mẫu vân tay đã nạp: <strong>{dev.enrolledFingerprints || 120} mẫu</strong></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: PASTE TEXT */}
+            {importTab === 'text' && (
+              <div className="space-y-3">
+                <textarea
+                  value={rawTextLog}
+                  onChange={(e) => setRawTextLog(e.target.value)}
+                  placeholder="Dán các dòng log quẹt thẻ vào đây (Mã NV, Ngày Giờ)..."
+                  rows={6}
+                  className="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    disabled={importingLog || !rawTextLog.trim()}
+                    onClick={() => handleImportRawText(rawTextLog)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow disabled:opacity-50"
+                  >
+                    {importingLog ? 'Đang xử lý...' : '⚡ Xử Lý & Nạp Vào Bảng Công'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Dual Timekeeping Methods Info Box (MỤC 2) */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">

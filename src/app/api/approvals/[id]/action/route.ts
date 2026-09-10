@@ -265,32 +265,57 @@ export async function POST(
           });
         }
 
-        const leaveDate = formData.startDate || formData.workDate;
-        if (leaveDate) {
-          await tx.attendance.upsert({
-            where: {
-              userId_workDate: {
+        const startDateStr = formData.startDate || formData.workDate;
+        const endDateStr = formData.endDate || startDateStr;
+
+        if (startDateStr) {
+          let dateList: string[] = [startDateStr];
+          if (endDateStr && endDateStr !== startDateStr) {
+            try {
+              const startObj = new Date(startDateStr);
+              const endObj = new Date(endDateStr);
+              if (!isNaN(startObj.getTime()) && !isNaN(endObj.getTime()) && endObj >= startObj) {
+                dateList = [];
+                const curr = new Date(startObj);
+                while (curr <= endObj) {
+                  dateList.push(curr.toISOString().split('T')[0]);
+                  curr.setDate(curr.getDate() + 1);
+                }
+              }
+            } catch (err) {
+              console.error('Error parsing leave date interval:', err);
+              dateList = [startDateStr];
+            }
+          }
+
+          const unitsPerDay = isHalfShift ? 0.5 : (isUnpaid ? 0.0 : 1.0);
+
+          for (const leaveDate of dateList) {
+            await tx.attendance.upsert({
+              where: {
+                userId_workDate: {
+                  userId: freshRequest.creatorId,
+                  workDate: leaveDate,
+                },
+              },
+              update: {
+                status: 'LEAVE',
+                calculatedWorkUnits: unitsPerDay,
+                lateMinutes: 0,
+                earlyMinutes: 0,
+                note: `Nghỉ phép đã duyệt: ${freshRequest.template.name} (${duration} công, Đơn ${freshRequest.code})`,
+              },
+              create: {
                 userId: freshRequest.creatorId,
                 workDate: leaveDate,
+                status: 'LEAVE',
+                calculatedWorkUnits: unitsPerDay,
+                lateMinutes: 0,
+                earlyMinutes: 0,
+                note: `Nghỉ phép đã duyệt: ${freshRequest.template.name} (${duration} công, Đơn ${freshRequest.code})`,
               },
-            },
-            update: {
-              status: 'LEAVE',
-              calculatedWorkUnits: leaveWorkUnits,
-              lateMinutes: 0,
-              earlyMinutes: 0,
-              note: `Nghỉ phép đã duyệt: ${freshRequest.template.name} (${duration} công, Đơn ${freshRequest.code})`,
-            },
-            create: {
-              userId: freshRequest.creatorId,
-              workDate: leaveDate,
-              status: 'LEAVE',
-              calculatedWorkUnits: leaveWorkUnits,
-              lateMinutes: 0,
-              earlyMinutes: 0,
-              note: `Nghỉ phép đã duyệt: ${freshRequest.template.name} (${duration} công, Đơn ${freshRequest.code})`,
-            },
-          });
+            });
+          }
         }
       }
 

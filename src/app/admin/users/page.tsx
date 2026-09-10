@@ -23,6 +23,8 @@ export default function AdminUsersPage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
 
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -142,13 +144,15 @@ export default function AdminUsersPage() {
   };
 
   const filteredUsers = users.filter((u) => {
-    if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(term) ||
-      u.employeeCode.toLowerCase().includes(term) ||
-      u.email.toLowerCase().includes(term)
-    );
+    const matchesSearch =
+      !searchTerm ||
+      u.name?.toLowerCase().includes(term) ||
+      u.employeeCode?.toLowerCase().includes(term) ||
+      u.email?.toLowerCase().includes(term);
+    const matchesBranch = !selectedBranch || u.branchId === selectedBranch;
+    const matchesDept = !selectedDepartment || u.departmentId === selectedDepartment;
+    return matchesSearch && matchesBranch && matchesDept;
   });
 
   const getRoleBadge = (role: string) => {
@@ -184,16 +188,46 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-        <Search className="w-4 h-4 text-slate-400" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Tìm theo tên nhân viên, mã NV, email..."
-          className="flex-1 bg-transparent text-xs focus:outline-none text-slate-800"
-        />
+      {/* Search & Filter Bar */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center gap-3">
+        <div className="flex-1 flex items-center gap-3 w-full">
+          <Search className="w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm theo tên nhân viên, mã NV, email..."
+            className="flex-1 bg-transparent text-xs focus:outline-none text-slate-800"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
+          <select
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="">-- Tất cả Chi nhánh --</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="">-- Tất cả Phòng ban --</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Users Table */}

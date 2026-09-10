@@ -2,14 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { CalendarRange, CheckCircle2, Users, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function AdminSchedulesPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [filterBranch, setFilterBranch] = useState('');
+  const [filterDept, setFilterDept] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectedShiftId, setSelectedShiftId] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('2026-09-01');
-  const [endDate, setEndDate] = useState<string>('2026-09-30');
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-01'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-28'));
   const [excludeSundays, setExcludeSundays] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -28,6 +33,14 @@ export default function AdminSchedulesPage() {
         setShifts(d.shifts || []);
         if (d.shifts?.[0]) setSelectedShiftId(d.shifts[0].id);
       });
+
+    fetch('/api/admin/branches')
+      .then((r) => r.json())
+      .then((d) => setBranches(d.branches || []));
+
+    fetch('/api/admin/departments')
+      .then((r) => r.json())
+      .then((d) => setDepartments(d.departments || []));
   }, []);
 
   const handleSelectAll = () => {
@@ -173,41 +186,84 @@ export default function AdminSchedulesPage() {
 
         {/* Step 3: Choose Users */}
         <div className="pt-4 border-t border-slate-100">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
               3. Chọn Nhân Sự Áp Dụng ({selectedUserIds.length}/{users.length})
             </h2>
-            <button
-              type="button"
-              onClick={handleSelectAll}
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
-            >
-              {selectedUserIds.length === users.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-            </button>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={filterBranch}
+                onChange={(e) => setFilterBranch(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-700"
+              >
+                <option value="">Tất cả Chi nhánh</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filterDept}
+                onChange={(e) => setFilterDept(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-700"
+              >
+                <option value="">Tất cả Phòng ban</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const displayedIds = users
+                    .filter((u) => (!filterBranch || u.branchId === filterBranch) && (!filterDept || u.departmentId === filterDept))
+                    .map((u) => u.id);
+                  const allSelected = displayedIds.every((id) => selectedUserIds.includes(id));
+                  if (allSelected) {
+                    setSelectedUserIds((prev) => prev.filter((id) => !displayedIds.includes(id)));
+                  } else {
+                    setSelectedUserIds((prev) => Array.from(new Set([...prev, ...displayedIds])));
+                  }
+                }}
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 whitespace-nowrap"
+              >
+                Chọn / Bỏ nhóm này
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-            {users.map((u) => (
-              <label
-                key={u.id}
-                className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer text-xs transition-all ${
-                  selectedUserIds.includes(u.id)
-                    ? 'border-emerald-500 bg-emerald-50/50 text-slate-900'
-                    : 'border-slate-100 bg-slate-50/60 text-slate-600'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedUserIds.includes(u.id)}
-                  onChange={() => handleToggleUser(u.id)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500"
-                />
-                <div className="truncate">
-                  <div className="font-bold truncate">{u.name}</div>
-                  <div className="text-[10px] text-slate-400">{u.employeeCode} - {u.department?.name || 'Chưa xếp'}</div>
-                </div>
-              </label>
-            ))}
+            {users
+              .filter((u) => (!filterBranch || u.branchId === filterBranch) && (!filterDept || u.departmentId === filterDept))
+              .map((u) => (
+                <label
+                  key={u.id}
+                  className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer text-xs transition-all ${
+                    selectedUserIds.includes(u.id)
+                      ? 'border-emerald-500 bg-emerald-50/50 text-slate-900'
+                      : 'border-slate-100 bg-slate-50/60 text-slate-600'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIds.includes(u.id)}
+                    onChange={() => handleToggleUser(u.id)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="truncate">
+                    <div className="font-bold truncate">{u.name}</div>
+                    <div className="text-[10px] text-slate-400">
+                      {u.employeeCode} - {u.department?.name || 'Chưa xếp'} ({u.branch?.name || 'Chi nhánh'})
+                    </div>
+                  </div>
+                </label>
+              ))}
           </div>
         </div>
 

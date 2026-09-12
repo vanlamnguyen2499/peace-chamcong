@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
     // Subtitle
     ws.mergeCells('A2:L2');
     const subCell = ws.getCell('A2');
-    subCell.value = `Xuất ngày: ${new Date().toLocaleDateString('vi-VN')} | Người xuất: ${user.name} (${user.employeeCode}) | Tổng số đơn: ${requests.length}`;
+    subCell.value = `Xuất ngày: ${new Date().toLocaleDateString('vi-VN')} | Người xuất: ${user.name} (${user.employeeCode}) | Tổng số phiếu: ${requests.length}`;
     subCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getRow(2).height = 22;
@@ -123,8 +123,8 @@ export async function GET(req: NextRequest) {
     // Table Headers
     const headers = [
       'STT',
-      'Mã Đơn',
-      'Loại Đơn',
+      'Mã Phiếu',
+      'Loại Phiếu',
       'Người Tạo (Người Được Duyệt)',
       'Phòng Ban',
       'Ngày Gửi',
@@ -217,8 +217,8 @@ export async function GET(req: NextRequest) {
     // Auto fit column widths
     ws.columns = [
       { width: 6 },  // STT
-      { width: 18 }, // Mã đơn
-      { width: 22 }, // Loại đơn
+      { width: 18 }, // Mã phiếu
+      { width: 22 }, // Loại phiếu
       { width: 26 }, // Người tạo
       { width: 20 }, // Phòng ban
       { width: 14 }, // Ngày gửi

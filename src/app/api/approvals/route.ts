@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
             { steps: { some: { approverId: user.id } } },
           ];
         } else {
-          return NextResponse.json({ error: 'Không có quyền xem toàn bộ đơn' }, { status: 403 });
+          return NextResponse.json({ error: 'Không có quyền xem toàn bộ phiếu' }, { status: 403 });
         }
       }
     }
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!templateId || !data) {
-      return NextResponse.json({ error: 'Thiếu thông tin mẫu đơn hoặc dữ liệu gửi lên' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu thông tin mẫu phiếu hoặc dữ liệu gửi lên' }, { status: 400 });
     }
 
     const template = await prisma.approvalTemplate.findUnique({
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!template || !template.isActive) {
-      return NextResponse.json({ error: 'Mẫu đơn không tồn tại hoặc đã bị khóa' }, { status: 404 });
+      return NextResponse.json({ error: 'Mẫu phiếu không tồn tại hoặc đã bị khóa' }, { status: 404 });
     }
 
     // Parse default steps
@@ -409,7 +409,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      throw lastError || new Error('Không thể sinh mã đơn duy nhất sau nhiều lần thử');
+      throw lastError || new Error('Không thể sinh mã phiếu duy nhất sau nhiều lần thử');
     });
 
     const requestCode = newRequest.code;
@@ -421,7 +421,7 @@ export async function POST(req: NextRequest) {
         await prisma.notification.create({
           data: {
             userId: firstStep.approverId,
-            title: `Đơn mới cần duyệt: ${template.name}`,
+            title: `Phiếu mới cần duyệt: ${template.name}`,
             message: `${user.name} (${user.employeeCode}) vừa chỉ định bạn duyệt yêu cầu ${requestCode}.`,
             link: `/approvals/${newRequest.id}`,
             type: 'APPROVAL',
@@ -435,7 +435,7 @@ export async function POST(req: NextRequest) {
           await prisma.notification.create({
             data: {
               userId: approver.id,
-              title: `Đơn mới cần duyệt: ${template.name}`,
+              title: `Phiếu mới cần duyệt: ${template.name}`,
               message: `${user.name} (${user.employeeCode}) vừa gửi yêu cầu ${requestCode}.`,
               link: `/approvals/${newRequest.id}`,
               type: 'APPROVAL',
@@ -446,21 +446,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Dispatch Telegram Bot alert
-    const telegramMsg = `🔔 <b>[ĐƠN MỚI CẦN DUYỆT]</b>\n` +
-      `📌 <b>Loại đơn:</b> ${template.name}\n` +
+    const telegramMsg = `🔔 <b>[PHIẾU MỚI CẦN DUYỆT]</b>\n` +
+      `📌 <b>Loại phiếu:</b> ${template.name}\n` +
       `👤 <b>Người tạo:</b> ${user.name} (${user.employeeCode} - ${user.position || 'Nhân viên'})\n` +
-      `🔖 <b>Mã đơn:</b> <code>${requestCode}</code>\n` +
+      `🔖 <b>Mã phiếu:</b> <code>${requestCode}</code>\n` +
       `📝 <b>Lý do:</b> ${data.reason || data.purpose || 'Xem chi tiết trong hệ thống'}\n` +
       `👉 <i>Vui lòng vào hệ thống để xem và phê duyệt.</i>`;
     sendTelegramNotification(telegramMsg).catch(() => {});
 
     return NextResponse.json({
       success: true,
-      message: 'Gửi đơn phê duyệt thành công!',
+      message: 'Gửi phiếu phê duyệt thành công!',
       request: newRequest,
     });
   } catch (error: any) {
     console.error('Error creating approval request:', error);
-    return NextResponse.json({ error: error.message || 'Lỗi gửi đơn phê duyệt' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Lỗi gửi phiếu phê duyệt' }, { status: 500 });
   }
 }

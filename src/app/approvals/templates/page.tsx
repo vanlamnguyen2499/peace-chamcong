@@ -105,10 +105,10 @@ export default function ApprovalTemplatesPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <Layers className="w-6 h-6 text-emerald-600" />
-            Mẫu Đơn Duyệt & Thiết Kế Form (Form Builder)
+            Mẫu Phiếu Phê Duyệt &amp; Thiết Kế Biểu Mẫu (Form Builder)
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Quản lý các mẫu đơn chuẩn và tạo thêm mẫu đơn tùy biến với các trường dữ liệu động
+            Quản lý các mẫu phiếu chuẩn và tạo thêm mẫu phiếu tùy biến với các trường dữ liệu động
           </p>
         </div>
 
@@ -116,7 +116,7 @@ export default function ApprovalTemplatesPage() {
           onClick={() => setShowModal(true)}
           className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-emerald-600/20 hover:shadow-lg transition-all"
         >
-          <Plus className="w-4 h-4" /> Thiết Kế Mẫu Đơn Mới
+          <Plus className="w-4 h-4" /> Thiết Kế Mẫu Phiếu Mới
         </button>
       </div>
 
@@ -158,25 +158,25 @@ export default function ApprovalTemplatesPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Thiết Kế Mẫu Đơn Tùy Biến</h3>
+              <h3 className="font-bold text-slate-900 text-base">Thiết Kế Mẫu Phiếu Tùy Biến</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
 
             <form onSubmit={handleSaveTemplate} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tên mẫu đơn *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tên mẫu phiếu *</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="VD: Đơn Đề Xuất Công Tác"
+                    placeholder="VD: Phiếu Đề Xuất Công Tác"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Mã mẫu đơn *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mã mẫu phiếu *</label>
                   <input
                     type="text"
                     required
@@ -194,7 +194,7 @@ export default function ApprovalTemplatesPage() {
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Mô tả mục đích sử dụng đơn..."
+                  placeholder="Mô tả mục đích sử dụng phiếu..."
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>

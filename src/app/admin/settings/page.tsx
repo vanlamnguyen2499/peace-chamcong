@@ -77,7 +77,7 @@ export default function AdminSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: '🤖 <b>[PEACE GAPOWORK]</b>\n✅ Kết nối Telegram Bot thành công! Bạn sẽ nhận được thông báo khi có đơn mới cần duyệt.',
+          text: '🤖 <b>[PEACE GAPOWORK]</b>\n✅ Kết nối Telegram Bot thành công! Bạn sẽ nhận được thông báo khi có phiếu mới cần duyệt.',
           parse_mode: 'HTML',
         }),
       });
@@ -161,7 +161,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <p className="text-xs text-slate-500 mb-3">
-            Tự động gửi thông báo đến Group hoặc Chat cá nhân của Quản lý / Giám đốc ngay khi nhân viên tạo đơn mới cần duyệt hoặc khi hoàn tất duyệt đơn.
+            Tự động gửi thông báo đến Group hoặc Chat cá nhân của Quản lý / Giám đốc ngay khi nhân viên tạo phiếu mới cần duyệt hoặc khi hoàn tất duyệt phiếu.
           </p>
 
           <div className="space-y-3">

@@ -39,3 +39,24 @@ export async function PUT(
     return NextResponse.json({ error: error.message || 'Lỗi cập nhật ca làm việc' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getSessionUser();
+    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'HR_ADMIN')) {
+      return NextResponse.json({ error: 'Không có quyền xóa ca làm việc' }, { status: 403 });
+    }
+
+    const { id } = params;
+    await prisma.shift.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: 'Đã xóa ca làm việc' });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Lỗi xóa ca làm việc' }, { status: 500 });
+  }
+}

@@ -52,46 +52,40 @@ export async function POST(
       });
 
       if (!freshRequest) {
-        throw new ActionError(404, 'Không tìm thấy đơn yêu cầu');
+        throw new ActionError(404, 'Không tìm thấy phiếu yêu cầu');
       }
 
       if (freshRequest.status !== 'PENDING') {
-        throw new ActionError(400, `Đơn này đã ở trạng thái ${freshRequest.status}, không thể thao tác thêm`);
+        throw new ActionError(400, `Phiếu này đã ở trạng thái ${freshRequest.status}, không thể thao tác thêm`);
       }
 
       const currentStep = freshRequest.steps.find(
         (s) => s.stepOrder === freshRequest.currentStep && s.status === 'PENDING'
       );
       if (!currentStep) {
-        throw new ActionError(400, 'Không tìm thấy bước duyệt hiện tại hoặc đơn này đã được xử lý bởi thao tác khác, không thể thao tác thêm');
+        throw new ActionError(400, 'Không tìm thấy bước duyệt hiện tại hoặc phiếu này đã được xử lý bởi thao tác khác, không thể thao tác thêm');
       }
 
       // 2. Kiểm tra thẩm quyền phê duyệt
       const canApprove =
+        user.role === 'SUPER_ADMIN' ||
         currentStep.approverId === user.id ||
         currentStep.approverRole === user.role ||
-        user.role === 'SUPER_ADMIN' ||
         (user.role === 'HR_ADMIN' && currentStep.approverRole === 'HR_ADMIN');
 
       if (!canApprove) {
-        // Kiểm tra nếu user là người duyệt của bước trước đó vừa được duyệt thành công trong phiên đồng thời
-        const previousStep = freshRequest.steps.find((s) => s.stepOrder === freshRequest.currentStep - 1);
-        const wasPreviousApprover = Boolean(
-          previousStep &&
-          previousStep.status === 'APPROVED' &&
-          (previousStep.approverId === user.id || previousStep.approverRole === user.role)
-        );
-
-        if (wasPreviousApprover && note && typeof note === 'string' && note.trim().length > 0) {
-          throw new ActionError(400, 'Bước duyệt này đã được xử lý bởi một thao tác khác, không thể thao tác thêm');
-        }
-
-        throw new ActionError(403, 'Bạn không có quyền duyệt bước này');
+        throw new ActionError(403, 'Bạn không có quyền phê duyệt bước này');
       }
+
+      const now = new Date();
 
       // 3. Phân nhánh hành động: REJECT
       if (action === 'REJECT') {
-        // Cập nhật Step có điều kiện lạc quan
+        if (!note || note.trim().length === 0) {
+          throw new ActionError(400, 'Vui lòng nhập lý do từ chối');
+        }
+
+        // Cập nhật Step hiện tại
         const stepUpdate = await tx.approvalStep.updateMany({
           where: {
             id: currentStep.id,
@@ -100,7 +94,7 @@ export async function POST(
           data: {
             approverId: user.id,
             status: 'REJECTED',
-            note: note || 'Từ chối yêu cầu',
+            note,
             signatureUrl: signatureUrl || undefined,
             actedAt: now,
           },
@@ -110,7 +104,7 @@ export async function POST(
           throw new ActionError(400, 'Bước duyệt này đã được xử lý bởi một thao tác khác, không thể thao tác thêm');
         }
 
-        // Cập nhật Đơn có điều kiện lạc quan
+        // Cập nhật Request thành REJECTED có điều kiện lạc quan
         const reqUpdate = await tx.approvalRequest.updateMany({
           where: {
             id: freshRequest.id,
@@ -122,14 +116,14 @@ export async function POST(
         });
 
         if (reqUpdate.count === 0) {
-          throw new ActionError(400, 'Đơn này đã ở trạng thái đã xử lý, không thể thao tác thêm');
+          throw new ActionError(400, 'Phiếu này đã ở trạng thái đã xử lý, không thể thao tác thêm');
         }
 
-        // Thông báo cho người tạo đơn
+        // Thông báo cho người tạo phiếu
         await tx.notification.create({
           data: {
             userId: freshRequest.creatorId,
-            title: `Đơn ${freshRequest.code} bị từ chối`,
+            title: `Phiếu ${freshRequest.code} bị từ chối`,
             message: `${user.name} đã từ chối yêu cầu "${freshRequest.template.name}". Lý do: ${note}`,
             link: `/approvals/${freshRequest.id}`,
             type: 'APPROVAL',
@@ -140,7 +134,7 @@ export async function POST(
           isRejected: true,
           isFinal: false,
           request: freshRequest,
-          message: 'Đã từ chối đơn yêu cầu',
+          message: 'Đã từ chối phiếu yêu cầu',
         };
       }
 
@@ -180,7 +174,7 @@ export async function POST(
         });
 
         if (reqUpdate.count === 0) {
-          throw new ActionError(400, 'Đơn này đã được chuyển bước bởi một thao tác khác, không thể thao tác thêm');
+          throw new ActionError(400, 'Phiếu này đã được chuyển bước bởi một thao tác khác, không thể thao tác thêm');
         }
 
         // Bắn thông báo cho người duyệt bước kế tiếp
@@ -188,8 +182,8 @@ export async function POST(
           await tx.notification.create({
             data: {
               userId: nextStep.approverId,
-              title: `Đơn cần bạn duyệt tiếp: ${freshRequest.template.name}`,
-              message: `${freshRequest.creator.name} - Mã đơn: ${freshRequest.code}`,
+              title: `Phiếu cần bạn duyệt tiếp: ${freshRequest.template.name}`,
+              message: `${freshRequest.creator.name} - Mã phiếu: ${freshRequest.code}`,
               link: `/approvals/${freshRequest.id}`,
               type: 'APPROVAL',
             },
@@ -202,8 +196,8 @@ export async function POST(
             await tx.notification.create({
               data: {
                 userId: approver.id,
-                title: `Đơn cần bạn duyệt tiếp: ${freshRequest.template.name}`,
-                message: `${freshRequest.creator.name} - Mã đơn: ${freshRequest.code}`,
+                title: `Phiếu cần bạn duyệt tiếp: ${freshRequest.template.name}`,
+                message: `${freshRequest.creator.name} - Mã phiếu: ${freshRequest.code}`,
                 link: `/approvals/${freshRequest.id}`,
                 type: 'APPROVAL',
               },
@@ -215,7 +209,7 @@ export async function POST(
           isRejected: false,
           isFinal: false,
           request: freshRequest,
-          message: 'Đã duyệt bước này, đơn đã được chuyển đến cấp phê duyệt tiếp theo.',
+          message: 'Đã duyệt bước này, phiếu đã được chuyển đến cấp phê duyệt tiếp theo.',
         };
       }
 
@@ -474,17 +468,17 @@ export async function POST(
               workHours: 8.0,
               otHours: calculatedOtHours,
               status: 'PRESENT',
-              note: `Đã duyệt tăng ca (+${calculatedOtHours}h) (Đơn ${freshRequest.code})`,
+              note: `Đã duyệt tăng ca (+${calculatedOtHours}h) (Phiếu ${freshRequest.code})`,
             },
           });
         }
       }
 
-      // 4.5. Thông báo hoàn tất cho người tạo đơn
+      // 4.5. Thông báo hoàn tất cho người tạo phiếu
       await tx.notification.create({
         data: {
           userId: freshRequest.creatorId,
-          title: `Đơn ${freshRequest.code} đã được duyệt thành công 🎉`,
+          title: `Phiếu ${freshRequest.code} đã được duyệt thành công 🎉`,
           message: `Yêu cầu "${freshRequest.template.name}" của bạn đã hoàn tất toàn bộ các bước phê duyệt.`,
           link: `/approvals/${freshRequest.id}`,
           type: 'APPROVAL',
@@ -495,24 +489,24 @@ export async function POST(
         isRejected: false,
         isFinal: true,
         request: freshRequest,
-        message: 'Đã hoàn tất phê duyệt đơn yêu cầu thành công!',
+        message: 'Đã hoàn tất phê duyệt phiếu yêu cầu thành công!',
       };
     });
 
     // 5. Bắn thông báo Telegram bất đồng bộ ngoài transaction (chỉ gửi khi transaction đã commit thành công)
     if (result.isRejected) {
       sendTelegramNotification(
-        `❌ <b>[ĐƠN BỊ TỪ CHỐI]</b>\n` +
-        `📌 <b>Loại đơn:</b> ${result.request.template.name}\n` +
-        `🔖 <b>Mã đơn:</b> <code>${result.request.code}</code>\n` +
+        `❌ <b>[PHIẾU BỊ TỪ CHỐI]</b>\n` +
+        `📌 <b>Loại phiếu:</b> ${result.request.template.name}\n` +
+        `🔖 <b>Mã phiếu:</b> <code>${result.request.code}</code>\n` +
         `👤 <b>Người duyệt:</b> ${user.name}\n` +
         `⚠️ <b>Lý do từ chối:</b> ${note}`
       ).catch(() => {});
     } else if (result.isFinal) {
       sendTelegramNotification(
-        `✅ <b>[ĐƠN ĐÃ PHÊ DUYỆT HOÀN TẤT]</b>\n` +
-        `📌 <b>Loại đơn:</b> ${result.request.template.name}\n` +
-        `🔖 <b>Mã đơn:</b> <code>${result.request.code}</code>\n` +
+        `✅ <b>[PHIẾU ĐÃ PHÊ DUYỆT HOÀN TẤT]</b>\n` +
+        `📌 <b>Loại phiếu:</b> ${result.request.template.name}\n` +
+        `🔖 <b>Mã phiếu:</b> <code>${result.request.code}</code>\n` +
         `👤 <b>Người tạo:</b> ${result.request.creator.name}\n` +
         `✍️ <b>Người duyệt cuối:</b> ${user.name}`
       ).catch(() => {});

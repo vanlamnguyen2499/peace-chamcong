@@ -546,7 +546,7 @@ export default function AttendancePage() {
                 href="/approvals"
                 className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
               >
-                <FileEdit className="w-3.5 h-3.5" /> Gửi đơn giải trình / bổ sung công
+                <FileEdit className="w-3.5 h-3.5" /> Gửi phiếu giải trình / bổ sung công
               </Link>
               <Link
                 href="/history"
@@ -565,7 +565,7 @@ export default function AttendancePage() {
           <div>
             <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
               <FileEdit className="w-4 h-4 text-emerald-600" />
-              Danh Mục 13 Mẫu Đơn &amp; Phiếu Xác Nhận Chuẩn Hóa
+              Danh Mục 13 Mẫu Phiếu Xác Nhận Chuẩn Hóa
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Tạo phiếu xác nhận nhanh theo quy trình 3 bước (Quản lý ký xác nhận $\to$ Cập nhật hệ thống $\to$ Duyệt tự động)
@@ -575,7 +575,7 @@ export default function AttendancePage() {
             href="/approvals"
             className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
           >
-            Vào Trung Tâm Duyệt Đơn <ArrowRight className="w-3.5 h-3.5" />
+            Vào Trung Tâm Phiếu Duyệt <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 

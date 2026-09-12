@@ -299,7 +299,7 @@ export async function POST(req: NextRequest) {
       // 1. Resolve target user (Employee)
       const employeeId = targetUserId || item.creatorId || item.userId;
       if (!employeeId) {
-        throw new Error('Vui lòng chọn nhân sự được xác nhận / tạo đơn');
+        throw new Error('Vui lòng chọn nhân sự được xác nhận / tạo phiếu');
       }
 
       const employee = await prisma.user.findUnique({
@@ -323,7 +323,7 @@ export async function POST(req: NextRequest) {
                    (await prisma.approvalTemplate.findFirst({ where: { code: 'LEAVE_ANNUAL' } }));
       }
       if (!template) {
-        throw new Error('Không tìm thấy mẫu đơn phù hợp để số hóa');
+        throw new Error('Không tìm thấy mẫu phiếu phù hợp để số hóa');
       }
 
       // 3. Resolve signing Doctor/Manager
@@ -469,7 +469,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error digitizing offline slip:', error);
-    return NextResponse.json({ error: error.message || 'Lỗi khi số hóa đơn ký tay' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Lỗi khi số hóa phiếu ký tay' }, { status: 500 });
   }
 }
 

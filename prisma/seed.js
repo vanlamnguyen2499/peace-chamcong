@@ -80,10 +80,19 @@ async function main() {
 
   // 3. Khởi tạo Khung giờ & Ca làm việc tiêu chuẩn (MỤC 1)
   // Thứ 2 đến Thứ 7:
-  // Ca 1 (Sáng): 08h00 – 12h00 (4 tiếng = 1 công, check-in sớm từ 07h45)
+  // Ca 1 (Sáng): 08h00 – 12h00 (4 tiếng = 1 công)
   const shift1Sang = await prisma.shift.upsert({
     where: { code: 'CA_1_SANG' },
-    update: {},
+    update: {
+      name: 'Ca 1 - Sáng (08h00 - 12h00)',
+      startTime: '08:00',
+      endTime: '12:00',
+      workUnits: 1.0,
+      gracePeriodLate: 15,
+      gracePeriodEarly: 15,
+      minWorkHours: 4.0,
+      isActive: true,
+    },
     create: {
       name: 'Ca 1 - Sáng (08h00 - 12h00)',
       code: 'CA_1_SANG',
@@ -101,7 +110,16 @@ async function main() {
   // Ca 2 (Chiều): 13h30 – 17h30 (4 tiếng = 1 công)
   const shift2Chieu = await prisma.shift.upsert({
     where: { code: 'CA_2_CHIEU' },
-    update: {},
+    update: {
+      name: 'Ca 2 - Chiều (13h30 - 17h30)',
+      startTime: '13:30',
+      endTime: '17:30',
+      workUnits: 1.0,
+      gracePeriodLate: 15,
+      gracePeriodEarly: 15,
+      minWorkHours: 4.0,
+      isActive: true,
+    },
     create: {
       name: 'Ca 2 - Chiều (13h30 - 17h30)',
       code: 'CA_2_CHIEU',
@@ -119,7 +137,16 @@ async function main() {
   // Ca 3 (Tối): 15h30 – 19h30 (4 tiếng = 1 công)
   const shift3Toi = await prisma.shift.upsert({
     where: { code: 'CA_3_TOI' },
-    update: {},
+    update: {
+      name: 'Ca 3 - Tối (15h30 - 19h30)',
+      startTime: '15:30',
+      endTime: '19:30',
+      workUnits: 1.0,
+      gracePeriodLate: 15,
+      gracePeriodEarly: 15,
+      minWorkHours: 4.0,
+      isActive: true,
+    },
     create: {
       name: 'Ca 3 - Tối (15h30 - 19h30)',
       code: 'CA_3_TOI',
@@ -134,12 +161,23 @@ async function main() {
     },
   });
 
-  // Ca Cả Ngày (Sáng - Chiều - Tối: 08h00 - 19h30 = 3 công)
+  // Ca Cả Ngày (Sáng - Chiều - Tối: 08h00 - 19h30 = 3 ca / 3 công)
   const shiftAllDay = await prisma.shift.upsert({
     where: { code: 'CA_ALL_DAY' },
-    update: {},
+    update: {
+      name: 'Ca Cả Ngày (08h00 - 19h30 = 3 ca)',
+      startTime: '08:00',
+      endTime: '19:30',
+      breakStartTime: '12:00',
+      breakEndTime: '13:30',
+      workUnits: 3.0,
+      gracePeriodLate: 15,
+      gracePeriodEarly: 15,
+      minWorkHours: 10.0,
+      isActive: true,
+    },
     create: {
-      name: 'Ca Cả Ngày (08h00 - 19h30 = 3 công)',
+      name: 'Ca Cả Ngày (08h00 - 19h30 = 3 ca)',
       code: 'CA_ALL_DAY',
       startTime: '08:00',
       endTime: '19:30',
@@ -158,7 +196,16 @@ async function main() {
   // Ca 1 (Sáng): 08h00 – 12h00
   const shiftCNSang = await prisma.shift.upsert({
     where: { code: 'CA_CN_SANG' },
-    update: {},
+    update: {
+      name: 'Chủ Nhật - Ca 1 Sáng (08h00 - 12h00)',
+      startTime: '08:00',
+      endTime: '12:00',
+      workUnits: 1.0,
+      gracePeriodLate: 15,
+      gracePeriodEarly: 15,
+      minWorkHours: 4.0,
+      isActive: true,
+    },
     create: {
       name: 'Chủ Nhật - Ca 1 Sáng (08h00 - 12h00)',
       code: 'CA_CN_SANG',
@@ -176,7 +223,16 @@ async function main() {
   // Ca 2 (Chiều): 13h30 – 18h00
   const shiftCNChieu = await prisma.shift.upsert({
     where: { code: 'CA_CN_CHIEU' },
-    update: {},
+    update: {
+      name: 'Chủ Nhật - Ca 2 Chiều (13h30 - 18h00)',
+      startTime: '13:30',
+      endTime: '18:00',
+      workUnits: 1.0,
+      gracePeriodLate: 15,
+      gracePeriodEarly: 15,
+      minWorkHours: 4.5,
+      isActive: true,
+    },
     create: {
       name: 'Chủ Nhật - Ca 2 Chiều (13h30 - 18h00)',
       code: 'CA_CN_CHIEU',

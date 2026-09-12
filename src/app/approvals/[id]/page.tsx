@@ -116,7 +116,7 @@ export default function ApprovalDetailPage() {
     return (
       <div className="py-20 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
         <span className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-        <span>Đang tải thông tin đơn...</span>
+        <span>Đang tải thông tin phiếu...</span>
       </div>
     );
   }
@@ -200,7 +200,7 @@ export default function ApprovalDetailPage() {
                   <h3 className="text-xs font-bold text-indigo-950">
                     {request.isDigitizedOffline
                       ? 'Phiếu Xác Nhận Đã Được Bác Sĩ / Quản Lý Ký Tay Thực Tế'
-                      : 'Đơn Đã Đính Kèm Ảnh Phiếu Xác Nhận Viết Tay'}
+                      : 'Phiếu Đã Đính Kèm Ảnh Xác Nhận Viết Tay'}
                   </h3>
                   <p className="text-[11px] text-indigo-700">
                     {request.signedByApproverName
@@ -400,7 +400,7 @@ export default function ApprovalDetailPage() {
         <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
           {request.comments?.length === 0 ? (
             <div className="text-center py-6 text-xs text-slate-400 italic">
-              Chưa có trao đổi nào trên đơn này.
+              Chưa có trao đổi nào trên phiếu này.
             </div>
           ) : (
             request.comments?.map((c: any) => (
@@ -423,7 +423,7 @@ export default function ApprovalDetailPage() {
             type="text"
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Viết bình luận, phản hồi cho người tạo đơn..."
+            placeholder="Viết bình luận, phản hồi cho người tạo phiếu..."
             className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <button
@@ -441,7 +441,7 @@ export default function ApprovalDetailPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 text-rose-600">
-              <AlertTriangle className="w-5 h-5" /> Xác Nhận Từ Chối Đơn
+              <AlertTriangle className="w-5 h-5" /> Xác Nhận Từ Chối Phiếu
             </h3>
             <p className="text-xs text-slate-500">
               Vui lòng nhập lý do từ chối để thông báo lại cho nhân viên {request.creator?.name}:

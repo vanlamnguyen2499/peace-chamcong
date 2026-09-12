@@ -374,7 +374,7 @@ export default function DigitizationPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Lỗi lưu đơn');
+      if (!res.ok) throw new Error(data.error || 'Lỗi lưu phiếu');
 
       setFeedback({
         type: 'success',
@@ -386,7 +386,7 @@ export default function DigitizationPage() {
       await fetchData();
       setActiveTab('audit');
     } catch (err: any) {
-      setFeedback({ type: 'error', text: err.message || 'Lỗi gửi đơn' });
+      setFeedback({ type: 'error', text: err.message || 'Lỗi gửi phiếu' });
     } finally {
       setSubmitting(false);
     }
@@ -437,7 +437,7 @@ export default function DigitizationPage() {
               className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold transition-all flex items-center gap-1.5"
             >
               <FileText className="w-4 h-4 text-emerald-400" />
-              Trung Tâm Duyệt Đơn
+              Trung Tâm Duyệt Phiếu
             </Link>
             <Link
               href="/admin/timesheet"
@@ -529,7 +529,7 @@ export default function DigitizationPage() {
           }`}
         >
           <Camera className="w-4 h-4" />
-          📷 Form Đơn Chi Tiết Kèm Camera
+          📷 Form Phiếu Chi Tiết Kèm Camera
         </button>
 
         <button
@@ -585,7 +585,7 @@ export default function DigitizationPage() {
                 <tr>
                   <th className="p-3 w-10 text-center">STT</th>
                   <th className="p-3 min-w-[200px]">Nhân Sự Được Xác Nhận *</th>
-                  <th className="p-3 min-w-[180px]">Loại Phiếu / Mẫu Đơn *</th>
+                  <th className="p-3 min-w-[180px]">Loại Phiếu / Mẫu Phiếu Phê Duyệt *</th>
                   <th className="p-3 min-w-[170px]">Bác Sĩ / Quản Lý Ký Tay *</th>
                   <th className="p-3 w-36">Ngày Áp Dụng *</th>
                   <th className="p-3 min-w-[220px]">Thông Số / Chi Tiết Nghiệp Vụ</th>
@@ -796,7 +796,7 @@ export default function DigitizationPage() {
         </div>
       )}
 
-      {/* TAB 2: FORM ĐƠN CHI TIẾT KÈM CAMERA (SINGLE DETAILED FORM) */}
+      {/* TAB 2: FORM PHIẾU CHI TIẾT KÈM CAMERA (SINGLE DETAILED FORM) */}
       {activeTab === 'single' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm max-w-3xl mx-auto space-y-6">
           <div>
@@ -846,7 +846,7 @@ export default function DigitizationPage() {
                     <option value="FORGOT_CHECKIN_CONFIRM">Phiếu Xác Nhận Quên Chấm Công (Bù 100%)</option>
                     <option value="OVERTIME_X2_CONFIRM">Phiếu Xác Nhận Tăng Ca (OT x2)</option>
                     <option value="LATE_EARLY_CONFIRM">Phiếu Xác Nhận Đi Trễ (Xóa phạt &gt; 30p)</option>
-                    <option value="ADJUSTMENT">Đơn Giải Trình Chấm Công</option>
+                    <option value="ADJUSTMENT">Phiếu Giải Trình Chấm Công</option>
                   </optgroup>
                   <optgroup label="🏖️ Nghỉ Phép &amp; Chế Độ">
                     <option value="LEAVE_ANNUAL">Nghỉ Phép Năm (Trừ quỹ phép)</option>
@@ -856,8 +856,8 @@ export default function DigitizationPage() {
                     <option value="LEAVE_UNPAID">Nghỉ Không Lương</option>
                   </optgroup>
                   <optgroup label="💼 Đào Tạo &amp; Công Tác">
-                    <option value="TRAINING_REQUEST">Đơn Đi Học / Đào Tạo (2 công)</option>
-                    <option value="BUSINESS_TRIP">Đơn Đi Công Tác</option>
+                    <option value="TRAINING_REQUEST">Phiếu Đi Học / Đào Tạo (2 công)</option>
+                    <option value="BUSINESS_TRIP">Phiếu Đi Công Tác</option>
                   </optgroup>
                 </select>
               </div>
@@ -1113,7 +1113,7 @@ export default function DigitizationPage() {
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Tìm mã đơn, tên nhân viên, Bác sĩ..."
+                placeholder="Tìm mã phiếu, tên nhân viên, Bác sĩ..."
                 value={auditSearch}
                 onChange={(e) => setAuditSearch(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20"
@@ -1125,7 +1125,7 @@ export default function DigitizationPage() {
               onChange={(e) => setAuditTemplateFilter(e.target.value)}
               className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
             >
-              <option value="">-- Tất cả mẫu đơn --</option>
+              <option value="">-- Tất cả mẫu phiếu --</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.code}>
                   {t.name}
@@ -1172,7 +1172,7 @@ export default function DigitizationPage() {
               <table className="w-full text-xs text-left">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px]">
                   <tr>
-                    <th className="p-3">Mã Đơn / Ngày</th>
+                    <th className="p-3">Mã Phiếu / Ngày</th>
                     <th className="p-3">Nhân Sự Được Duyệt</th>
                     <th className="p-3">Mẫu Phiếu / Nghiệp Vụ</th>
                     <th className="p-3">Bác Sĩ / Quản Lý Ký Tay</th>

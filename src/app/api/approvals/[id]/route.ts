@@ -58,7 +58,7 @@ export async function GET(
     });
 
     if (!request) {
-      return NextResponse.json({ error: 'Không tìm thấy đơn yêu cầu' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy phiếu yêu cầu' }, { status: 404 });
     }
 
     // Check permissions
@@ -69,7 +69,7 @@ export async function GET(
     const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'HR_ADMIN';
 
     if (!isCreator && !isApproverInChain && !isAdmin) {
-      return NextResponse.json({ error: 'Bạn không có quyền xem đơn này' }, { status: 403 });
+      return NextResponse.json({ error: 'Bạn không có quyền xem phiếu này' }, { status: 403 });
     }
 
     // Determine if current logged-in user can act on the current step
@@ -97,6 +97,6 @@ export async function GET(
     return NextResponse.json({ request: parsed });
   } catch (error: any) {
     console.error('Error fetching approval detail:', error);
-    return NextResponse.json({ error: 'Lỗi tải chi tiết đơn yêu cầu' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi tải chi tiết phiếu yêu cầu' }, { status: 500 });
   }
 }

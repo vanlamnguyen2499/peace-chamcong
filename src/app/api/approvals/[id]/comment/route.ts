@@ -40,7 +40,7 @@ export async function POST(
     });
 
     if (!request) {
-      return NextResponse.json({ error: 'Không tìm thấy đơn yêu cầu' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy phiếu yêu cầu' }, { status: 404 });
     }
 
     const comment = await prisma.approvalComment.create({
@@ -67,7 +67,7 @@ export async function POST(
       await prisma.notification.create({
         data: {
           userId: request.creatorId,
-          title: `Bình luận mới trên đơn ${request.code}`,
+          title: `Bình luận mới trên phiếu ${request.code}`,
           message: `${user.name}: "${sanitizedContent.substring(0, 80)}..."`,
           link: `/approvals/${request.id}`,
           type: 'APPROVAL',

@@ -214,7 +214,7 @@ export default function ApprovalsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Lỗi tạo đơn phê duyệt');
+        throw new Error(data.error || 'Lỗi tạo phiếu phê duyệt');
       }
 
       setShowCreateModal(false);
@@ -226,7 +226,7 @@ export default function ApprovalsPage() {
       setCustomApprovers({});
       await fetchRequests();
     } catch (err: any) {
-      setSubmitError(err.message || 'Lỗi gửi đơn');
+      setSubmitError(err.message || 'Lỗi gửi phiếu');
     } finally {
       setSubmitting(false);
     }
@@ -402,7 +402,7 @@ export default function ApprovalsPage() {
     },
     {
       code: 'ADJUSTMENT',
-      name: 'Đơn Giải Trình Chấm Công Bổ Sung',
+      name: 'Phiếu Giải Trình Chấm Công Bổ Sung',
       category: 'ATTENDANCE',
       desc: 'Giải trình lỗi GPS thiết bị, mất mạng hoặc đi gặp khách hàng',
       icon: ClockAlert,
@@ -413,7 +413,7 @@ export default function ApprovalsPage() {
     // Nhóm 3: Công Tác, Đào Tạo & Tài Chính
     {
       code: 'BUSINESS_TRIP',
-      name: 'Đơn Xin Đi Công Tác',
+      name: 'Phiếu Xin Đi Công Tác',
       category: 'WORK_FINANCE',
       desc: 'Lịch công tác, khám tuyến cơ sở, gặp đối tác (tính đủ công)',
       icon: Plane,
@@ -422,7 +422,7 @@ export default function ApprovalsPage() {
     },
     {
       code: 'TRAINING_REQUEST',
-      name: 'Đơn Đi Học / Đào Tạo Nâng Cao',
+      name: 'Phiếu Đi Học / Đào Tạo Nâng Cao',
       category: 'WORK_FINANCE',
       desc: 'Tham gia đào tạo chuyên môn Y khoa (đặc cách 2 công 14h-19h30)',
       icon: GraduationCap,
@@ -431,7 +431,7 @@ export default function ApprovalsPage() {
     },
     {
       code: 'WFH_REQUEST',
-      name: 'Đơn Làm Việc Từ Xa (WFH)',
+      name: 'Phiếu Làm Việc Từ Xa (WFH)',
       category: 'WORK_FINANCE',
       desc: 'Đăng ký làm việc tại nhà theo KPI khối văn phòng / Marketing / IT',
       icon: Laptop,
@@ -440,7 +440,7 @@ export default function ApprovalsPage() {
     },
     {
       code: 'PAYMENT',
-      name: 'Đơn Đề Xuất Tạm Ứng / Chi Tiêu',
+      name: 'Phiếu Đề Xuất Tạm Ứng / Chi Tiêu',
       category: 'WORK_FINANCE',
       desc: 'Tạm ứng chi phí công tác, mua sắm vật tư y tế hoặc thanh toán',
       icon: CreditCard,
@@ -469,13 +469,13 @@ export default function ApprovalsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Trung Tâm Phê Duyệt</h1>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Trung Tâm Phiếu &amp; Phê Duyệt</h1>
             <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-              Enterprise Hub (MỤC 5)
+              Hệ Thống Doanh Nghiệp (PEACE)
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Quy trình phê duyệt 3 bước, danh mục 8 mẫu đơn chuẩn và tổng hợp đối soát tự động
+            Quy trình phê duyệt 3 bước, danh mục 13 mẫu phiếu chuẩn và tổng hợp đối soát tự động
           </p>
         </div>
 
@@ -493,7 +493,7 @@ export default function ApprovalsPage() {
             onClick={handleExportExcel}
             disabled={exporting}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold px-3.5 py-2.5 rounded-2xl shadow-sm hover:shadow transition-all disabled:opacity-50"
-            title="Xuất danh sách đơn phê duyệt ra file Excel"
+            title="Xuất danh sách phiếu phê duyệt ra file Excel"
           >
             <Download className="w-4 h-4 text-emerald-600" />
             {exporting ? 'Đang xuất...' : 'Xuất Excel'}
@@ -503,7 +503,7 @@ export default function ApprovalsPage() {
             onClick={() => handleOpenCreateModal()}
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-emerald-600/20 hover:shadow-lg transition-all"
           >
-            <Plus className="w-4 h-4" /> Tạo Đơn / Phiếu Mới
+            <Plus className="w-4 h-4" /> Tạo Phiếu Mới
           </button>
         </div>
       </div>
@@ -514,7 +514,7 @@ export default function ApprovalsPage() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-              Quy Trình Phê Duyệt 3 Bước Chuẩn Doanh Nghiệp (MỤC 5)
+              Quy Trình Phê Duyệt 3 Bước Chuẩn Doanh Nghiệp
             </h2>
           </div>
           <span className="text-[10px] text-slate-400">Dựa trên Giấy xác nhận / Kê khai trực tuyến</span>
@@ -540,7 +540,7 @@ export default function ApprovalsPage() {
             <div>
               <div className="font-bold text-white">Bước 2: Cập Nhật Lên Hệ Thống</div>
               <div className="text-[11px] text-slate-300 mt-0.5">
-                Quản lý / HR hoặc Nhân sự bấm chọn mẫu đơn tương ứng và gửi đơn lên hệ thống PEACE.
+                Quản lý / HR hoặc Nhân sự bấm chọn mẫu phiếu tương ứng và gửi phiếu lên hệ thống PEACE.
               </div>
             </div>
           </div>
@@ -552,7 +552,7 @@ export default function ApprovalsPage() {
             <div>
               <div className="font-bold text-white">Bước 3: Quản Lý / HR Duyệt</div>
               <div className="text-[11px] text-slate-300 mt-0.5">
-                Bấm <strong>Approve (Duyệt)</strong> $\to$ Hệ thống tự động bù công, xóa phạt trễ &gt; 30p, nhân đôi giờ OT x2.
+                Bấm <strong>Phê Duyệt (Approve)</strong> $\to$ Hệ thống tự động bù công, xóa phạt trễ &gt; 30p, nhân đôi giờ OT x2.
               </div>
             </div>
           </div>
@@ -565,10 +565,10 @@ export default function ApprovalsPage() {
           <div>
             <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
               <Layers className="w-4 h-4 text-emerald-600" />
-              Danh Mục 13 Mẫu Đơn &amp; Phiếu Xác Nhận Chuẩn (Click để tạo ngay)
+              Danh Mục 13 Mẫu Phiếu Xác Nhận Chuẩn Hóa (Bấm để tạo ngay)
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Chọn một trong các mẫu đơn chuẩn hóa dưới đây để tạo phiếu xác nhận nhanh
+              Chọn một trong các mẫu phiếu chuẩn hóa dưới đây để tạo phiếu xác nhận nhanh
             </p>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -651,7 +651,7 @@ export default function ApprovalsPage() {
                 </div>
 
                 <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-emerald-600 font-bold">
-                  <span>Tạo đơn ngay</span>
+                  <span>Tạo phiếu ngay</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </button>
@@ -673,7 +673,7 @@ export default function ApprovalsPage() {
         >
           <div className="flex items-center justify-between text-xs text-slate-500 font-bold mb-1">
             <span className="flex items-center gap-1.5 text-slate-700">
-              <Send className="w-3.5 h-3.5 text-emerald-600" /> Đơn Của Tôi
+              <Send className="w-3.5 h-3.5 text-emerald-600" /> Phiếu Của Tôi
             </span>
             <span className="text-emerald-700 bg-emerald-100/70 text-[10px] px-1.5 py-0.5 rounded font-mono">
               {counts.myApproved}/{counts.myRequests} duyệt
@@ -718,7 +718,7 @@ export default function ApprovalsPage() {
             {counts.pendingMe}
           </div>
           <p className="text-[11px] text-slate-500 mt-2 truncate">
-            {counts.pendingMe > 0 ? 'Có đơn cần bạn phê duyệt ngay' : 'Đã xử lý xong tất cả đơn'}
+            {counts.pendingMe > 0 ? 'Có phiếu cần bạn phê duyệt ngay' : 'Đã xử lý xong tất cả phiếu'}
           </p>
         </div>
 
@@ -743,7 +743,7 @@ export default function ApprovalsPage() {
             {counts.historyMe}
           </div>
           <p className="text-[11px] text-slate-500 mt-2 truncate">
-            Lịch sử các đơn bạn đã duyệt / từ chối
+            Lịch sử các phiếu bạn đã duyệt / từ chối
           </p>
         </div>
 
@@ -768,7 +768,7 @@ export default function ApprovalsPage() {
             {isAdmin ? counts.all : counts.myRequests}
           </div>
           <p className="text-[11px] text-slate-500 mt-2 truncate">
-            Tra cứu ma trận & xuất báo cáo Excel
+            Tra cứu ma trận &amp; xuất báo cáo Excel
           </p>
         </div>
       </div>
@@ -786,7 +786,7 @@ export default function ApprovalsPage() {
               }`}
             >
               <Send className="w-3.5 h-3.5" />
-              Đơn Của Tôi (Người Được Duyệt)
+              Phiếu Của Tôi (Người Được Duyệt)
               {counts.myRequests > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${tab === 'my_requests' ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   {counts.myRequests}
@@ -841,7 +841,7 @@ export default function ApprovalsPage() {
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              Bảng Tổng Hợp & Đối Soát
+              Bảng Tổng Hợp &amp; Đối Soát
             </button>
           </div>
 
@@ -861,7 +861,7 @@ export default function ApprovalsPage() {
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm mã đơn, tên, lý do..."
+              placeholder="Tìm mã phiếu, tên, lý do..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
@@ -886,7 +886,7 @@ export default function ApprovalsPage() {
             onChange={(e) => setTemplateFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
-            <option value="">Tất cả loại mẫu đơn</option>
+            <option value="">Tất cả loại mẫu phiếu</option>
             {templates.map((tpl) => (
               <option key={tpl.id} value={tpl.code}>
                 {tpl.name}
@@ -914,14 +914,14 @@ export default function ApprovalsPage() {
       {loading ? (
         <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
           <span className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span>Đang tải danh sách đơn phê duyệt...</span>
+          <span>Đang tải danh sách phiếu phê duyệt...</span>
         </div>
       ) : filteredRequests.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
             <FileText className="w-6 h-6" />
           </div>
-          <h3 className="font-bold text-slate-800 text-sm">Không có đơn nào khớp</h3>
+          <h3 className="font-bold text-slate-800 text-sm">Không có phiếu nào khớp</h3>
           <p className="text-xs text-slate-500 mt-1">
             Không tìm thấy bản ghi phê duyệt nào trong bộ lọc hiện tại.
           </p>
@@ -929,7 +929,7 @@ export default function ApprovalsPage() {
             onClick={() => handleOpenCreateModal()}
             className="mt-4 inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-all"
           >
-            <Plus className="w-3.5 h-3.5" /> Tạo đơn ngay
+            <Plus className="w-3.5 h-3.5" /> Tạo phiếu ngay
           </button>
         </div>
       ) : tab === 'summary' ? (
@@ -941,7 +941,7 @@ export default function ApprovalsPage() {
               <p className="text-xs text-slate-500">Hiển thị chi tiết người gửi, người duyệt và kết quả xử lý</p>
             </div>
             <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full font-mono">
-              Tổng: {filteredRequests.length} đơn
+              Tổng: {filteredRequests.length} phiếu
             </span>
           </div>
 
@@ -949,8 +949,8 @@ export default function ApprovalsPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 text-slate-700 border-b border-slate-200 font-bold">
-                  <th className="py-3 px-4">Mã Đơn</th>
-                  <th className="py-3 px-4">Loại Đơn</th>
+                  <th className="py-3 px-4">Mã Phiếu</th>
+                  <th className="py-3 px-4">Loại Phiếu</th>
                   <th className="py-3 px-4">Người Gửi (Người Được Duyệt)</th>
                   <th className="py-3 px-4">Ngày Gửi</th>
                   <th className="py-3 px-4">Người Duyệt C1</th>
@@ -1173,8 +1173,8 @@ export default function ApprovalsPage() {
           <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
-                <h2 className="text-lg font-extrabold text-slate-900">Tạo Đơn Phê Duyệt Mới</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Chọn mẫu đơn chuẩn hóa và chỉ định người duyệt theo quy định</p>
+                <h2 className="text-lg font-extrabold text-slate-900">Tạo Phiếu Phê Duyệt Mới</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Chọn mẫu phiếu chuẩn hóa và chỉ định người duyệt theo quy định</p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -1194,13 +1194,13 @@ export default function ApprovalsPage() {
             <div className="my-4 space-y-3 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/80">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-emerald-600" /> Danh Mục 13 Loại Đơn Chuẩn:
+                  <Layers className="w-3.5 h-3.5 text-emerald-600" /> Danh Mục 13 Loại Phiếu Chuẩn:
                 </label>
                 <div className="relative w-full sm:w-64">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Tìm nhanh mẫu đơn..."
+                    placeholder="Tìm nhanh mẫu phiếu..."
                     value={modalSearch}
                     onChange={(e) => setModalSearch(e.target.value)}
                     className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800"
@@ -1305,16 +1305,16 @@ export default function ApprovalsPage() {
                   {selectedTemplate.description}
                 </div>
 
-                {/* Manager / HR Create on behalf of employee (MỤC 2) */}
+                {/* Manager / HR Create on behalf of employee */}
                 {isManager && (
                   <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200/80 space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-blue-600" />
-                        Nhân sự được xác nhận / Tạo đơn hộ:
+                        Nhân sự được xác nhận / Tạo phiếu hộ:
                       </label>
                       <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                        Dành cho Quản lý / HR (MỤC 2)
+                        Dành cho Quản lý / HR
                       </span>
                     </div>
                     <select
@@ -1330,7 +1330,7 @@ export default function ApprovalsPage() {
                       ))}
                     </select>
                     <p className="text-[11px] text-blue-700 leading-relaxed">
-                      💡 <strong>Quy định MỤC 2:</strong> Nhân sự quên chấm công phải báo ngay trong ngày. Quản lý/HR có thể nhập phiếu xác nhận hộ và duyệt để khôi phục công hợp lệ trên Bảng công.
+                      💡 <strong>Quy định:</strong> Nhân sự quên chấm công phải báo ngay trong ngày. Quản lý/HR có thể nhập phiếu xác nhận hộ và duyệt để khôi phục công hợp lệ trên Bảng công.
                     </p>
                   </div>
                 )}
@@ -1393,7 +1393,7 @@ export default function ApprovalsPage() {
                 <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
                     <UserCheck className="w-4 h-4 text-emerald-600" />
-                    Chỉ định Người Duyệt Đơn:
+                    Chỉ định Người Duyệt Phiếu:
                   </div>
 
                   {selectedTemplate.defaultSteps?.map((s: any, idx: number) => {
@@ -1435,7 +1435,7 @@ export default function ApprovalsPage() {
                     disabled={submitting}
                     className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {submitting ? 'Đang gửi...' : <><Send className="w-3.5 h-3.5" /> Gửi Đơn Duyệt</>}
+                    {submitting ? 'Đang gửi...' : <><Send className="w-3.5 h-3.5" /> Gửi Phiếu Duyệt</>}
                   </button>
                 </div>
               </form>

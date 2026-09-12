@@ -30,7 +30,7 @@ export default function Sidebar() {
   const personalNav = [
     { label: 'Chấm Công', href: '/', icon: Clock },
     {
-      label: 'Đơn Từ & Phê Duyệt',
+      label: 'Phiếu Yêu Cầu & Duyệt',
       href: '/approvals',
       icon: FileCheck,
       badge: pendingApprovalsCount > 0 ? pendingApprovalsCount : null,
@@ -47,7 +47,7 @@ export default function Sidebar() {
   const adminNav = [
     { label: 'Chi Nhánh & GPS', href: '/admin/branches', icon: Building2 },
     { label: 'Ca Làm Việc', href: '/admin/shifts', icon: CalendarDays },
-    { label: 'Mẫu Đơn Duyệt', href: '/approvals/templates', icon: Layers },
+    { label: 'Mẫu Phiếu Phê Duyệt', href: '/approvals/templates', icon: Layers },
     { label: 'Cấu Hình Hệ Thống', href: '/admin/settings', icon: Settings },
   ];
 

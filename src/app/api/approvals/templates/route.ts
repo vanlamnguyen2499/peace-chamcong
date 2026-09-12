@@ -23,7 +23,7 @@ export async function GET() {
     return NextResponse.json({ templates: parsed });
   } catch (error: any) {
     console.error('Error fetching templates:', error);
-    return NextResponse.json({ error: 'Lỗi tải mẫu đơn' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi tải mẫu phiếu' }, { status: 500 });
   }
 }
 
@@ -31,14 +31,14 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
     if (!user || user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Không có quyền tạo mẫu đơn mới' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền tạo mẫu phiếu mới' }, { status: 403 });
     }
 
     const body = await req.json();
     const { name, code, icon, description, schemaFields, approvalFlowType, defaultSteps } = body;
 
     if (!name || !code) {
-      return NextResponse.json({ error: 'Vui lòng nhập tên và mã mẫu đơn' }, { status: 400 });
+      return NextResponse.json({ error: 'Vui lòng nhập tên và mã mẫu phiếu' }, { status: 400 });
     }
 
     const newTemplate = await prisma.approvalTemplate.create({
@@ -57,6 +57,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, template: newTemplate });
   } catch (error: any) {
     console.error('Error creating template:', error);
-    return NextResponse.json({ error: error.message || 'Lỗi tạo mẫu đơn' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Lỗi tạo mẫu phiếu' }, { status: 500 });
   }
 }

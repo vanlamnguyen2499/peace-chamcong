@@ -17,7 +17,7 @@ export default function MobileBottomNav() {
   const navItems = [
     { label: 'Chấm Công', href: '/', icon: Clock },
     {
-      label: 'Phê Duyệt',
+      label: 'Phiếu Duyệt',
       href: '/approvals',
       icon: FileCheck,
       badge: pendingApprovalsCount > 0 ? pendingApprovalsCount : null,

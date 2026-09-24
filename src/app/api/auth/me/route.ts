@@ -16,12 +16,7 @@ export async function GET() {
 
     // Get today's attendance if exists
     const todayAttendance = await prisma.attendance.findUnique({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+      where: { userId_workDate: { userId: user.id, workDate: todayStr } },
       include: {
         shift: true,
         branch: true,
@@ -29,13 +24,8 @@ export async function GET() {
     });
 
     // Get today's assigned shift if any
-    const todaySchedule = await prisma.userShiftSchedule.findUnique({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+    const todaySchedule = await prisma.userShiftSchedule.findFirst({
+      where: { userId: user.id, workDate: todayStr  },
       include: {
         shift: true,
       },

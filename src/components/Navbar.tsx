@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Bell, LogOut, Shield, MapPin, Building, ChevronDown, Check, User, FileCheck } from 'lucide-react';
 
 export default function Navbar() {
+  const pathname = usePathname();
+  if (pathname?.startsWith('/m')) return null;
   const { user, unreadCount, logout, refreshUser } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);

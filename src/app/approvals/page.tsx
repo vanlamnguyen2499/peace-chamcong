@@ -75,6 +75,7 @@ export default function ApprovalsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const [customApprovers, setCustomApprovers] = useState<{ [stepOrder: number]: string }>({});
+  const [targetBranchId, setTargetBranchId] = useState<string>('');
   const [targetUserId, setTargetUserId] = useState<string>('');
   const [attachedPhoto, setAttachedPhoto] = useState<string | null>(null);
   const [paperSlipCode, setPaperSlipCode] = useState<string>('');
@@ -1317,66 +1318,96 @@ export default function ApprovalsPage() {
                         Dành cho Quản lý / HR
                       </span>
                     </div>
-                    <select
-                      value={targetUserId}
-                      onChange={(e) => setTargetUserId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
-                    >
-                      <option value="">-- Chính tôi ({user?.name}) --</option>
-                      {approversData.users?.map((u: any) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.employeeCode}) — {u.position || u.role} {u.department ? `[${u.department.name}]` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={targetBranchId}
+                        onChange={(e) => {
+                          setTargetBranchId(e.target.value);
+                          setTargetUserId('');
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                      >
+                        <option value="">-- Tất cả Chi nhánh --</option>
+                        {Array.from(new Map(approversData.users?.filter((u: any) => u.branch || u.branchId).map((u: any) => [u.branch?.id || u.branchId, u.branch || { id: u.branchId, name: 'Chi Nhánh Quận 1' }])).values()).map((b: any) => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={targetUserId}
+                        onChange={(e) => setTargetUserId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                      >
+                        <option value="">-- Chọn nhân sự (Mặc định: Chính tôi) --</option>
+                        {approversData.users
+                          ?.filter((u: any) => !targetBranchId || u.branchId === targetBranchId || u.branch?.id === targetBranchId)
+                          .sort((a: any, b: any) => {
+                            const deptA = a.department?.name || 'ZZZ';
+                            const deptB = b.department?.name || 'ZZZ';
+                            const deptComp = deptA.localeCompare(deptB, 'vi');
+                            if (deptComp !== 0) return deptComp;
+                            return (a.name || '').localeCompare(b.name || '', 'vi');
+                          })
+                          .map((u: any) => (
+                            <option key={u.id} value={u.id}>
+                              [{u.department?.name || 'Chưa xếp'}] {u.name} ({u.employeeCode}) {u.position ? `— ${u.position}` : ''}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
                     <p className="text-[11px] text-blue-700 leading-relaxed">
                       💡 <strong>Quy định:</strong> Nhân sự quên chấm công phải báo ngay trong ngày. Quản lý/HR có thể nhập phiếu xác nhận hộ và duyệt để khôi phục công hợp lệ trên Bảng công.
                     </p>
                   </div>
                 )}
 
-                {selectedTemplate.schemaFields?.map((field: any) => (
-                  <div key={field.name}>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      {field.label} {field.required && <span className="text-rose-500">*</span>}
-                    </label>
+                {selectedTemplate.schemaFields?.map((field: any) => {
+                  const isLeaveDuration = field.name === 'duration' || field.label === 'Số ngày nghỉ' || field.label === 'Số ngày nghỉ (công)';
+                  const displayLabel = isLeaveDuration ? 'Số công nghỉ' : field.label;
+                  const displayPlaceholder = isLeaveDuration ? 'Nhập số công nghỉ...' : `Nhập ${displayLabel.toLowerCase()}...`;
 
-                    {field.type === 'select' ? (
-                      <select
-                        required={field.required}
-                        value={formData[field.name] || ''}
-                        onChange={(e) => handleFormFieldChange(field.name, e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                      >
-                        <option value="">-- Chọn {field.label} --</option>
-                        {field.options?.map((opt: string) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === 'textarea' ? (
-                      <textarea
-                        required={field.required}
-                        rows={3}
-                        value={formData[field.name] || ''}
-                        onChange={(e) => handleFormFieldChange(field.name, e.target.value)}
-                        placeholder={`Nhập ${field.label.toLowerCase()}...`}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                      />
-                    ) : (
-                      <input
-                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'time' ? 'time' : 'text'}
-                        step={field.type === 'number' ? 'any' : undefined}
-                        required={field.required}
-                        value={formData[field.name] || ''}
-                        onChange={(e) => handleFormFieldChange(field.name, e.target.value)}
-                        placeholder={`Nhập ${field.label.toLowerCase()}...`}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                      />
-                    )}
-                  </div>
-                ))}
+                  return (
+                    <div key={field.name}>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        {displayLabel} {field.required && <span className="text-rose-500">*</span>}
+                      </label>
+
+                      {field.type === 'select' ? (
+                        <select
+                          required={field.required}
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFormFieldChange(field.name, e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        >
+                          <option value="">-- Chọn {displayLabel} --</option>
+                          {field.options?.map((opt: string) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.type === 'textarea' ? (
+                        <textarea
+                          required={field.required}
+                          rows={3}
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFormFieldChange(field.name, e.target.value)}
+                          placeholder={displayPlaceholder}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        />
+                      ) : (
+                        <input
+                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'time' ? 'time' : 'text'}
+                          step={field.type === 'number' ? 'any' : undefined}
+                          required={field.required}
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFormFieldChange(field.name, e.target.value)}
+                          placeholder={displayPlaceholder}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Optional Paper Slip / Handwritten Document Photo Attachment */}
                 <PaperSlipUpload
@@ -1389,37 +1420,56 @@ export default function ApprovalsPage() {
                   showMetadataFields={true}
                 />
 
-                {/* Designated Approver Selection Section */}
-                <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-3">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                    <UserCheck className="w-4 h-4 text-emerald-600" />
-                    Chỉ định Người Duyệt Phiếu:
+                {/* Optional Single Designated Approver Selection Section */}
+                <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                      <UserCheck className="w-4 h-4 text-emerald-600" />
+                      Lưu vết Người Phê Duyệt / Ký xác nhận (Tùy chọn):
+                    </div>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                      ⚡ Tự động tính công ngay
+                    </span>
                   </div>
+                  <p className="text-[11px] text-emerald-700">
+                    Phiếu sẽ được ghi nhận và tự động cộng/trừ công vào Bảng công ngay khi bạn nhấn Lưu.
+                  </p>
 
-                  {selectedTemplate.defaultSteps?.map((s: any, idx: number) => {
-                    const stepOrder = s.stepOrder || idx + 1;
-                    const stepTitle = s.label || s.approverRole || `Cấp ${stepOrder}`;
-
-                    return (
-                      <div key={stepOrder} className="bg-white p-3 rounded-xl border border-emerald-100">
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                          Bước {stepOrder} ({stepTitle}):
-                        </label>
-                        <select
-                          value={customApprovers[stepOrder] || ''}
-                          onChange={(e) => handleApproverChange(stepOrder, e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                        >
-                          <option value="">-- Chọn người duyệt bước này --</option>
-                          {approversData.users?.map((u: any) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name} ({u.employeeCode}) — {u.position || u.role} {u.department ? `[${u.department.name}]` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  })}
+                  <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Người đã ký duyệt / phê duyệt phiếu:
+                    </label>
+                    <select
+                      value={customApprovers[1] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomApprovers({ 1: val, 2: val });
+                        const userObj = approversData.users?.find((u: any) => u.id === val);
+                        if (userObj) {
+                          setSignedDoctorName(userObj.name);
+                        } else if (!val) {
+                          setSignedDoctorName('');
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800"
+                    >
+                      <option value="">-- Mặc định (Tự động xác nhận) --</option>
+                      {approversData.users
+                        ?.slice()
+                        .sort((a: any, b: any) => {
+                          const deptA = a.department?.name || 'ZZZ';
+                          const deptB = b.department?.name || 'ZZZ';
+                          const deptComp = deptA.localeCompare(deptB, 'vi');
+                          if (deptComp !== 0) return deptComp;
+                          return (a.name || '').localeCompare(b.name || '', 'vi');
+                        })
+                        .map((u: any) => (
+                          <option key={u.id} value={u.id}>
+                            [{u.department?.name || 'Chưa xếp'}] {u.name} ({u.employeeCode}) {u.position ? `— ${u.position}` : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="pt-3 flex items-center justify-end gap-3">
@@ -1435,7 +1485,7 @@ export default function ApprovalsPage() {
                     disabled={submitting}
                     className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {submitting ? 'Đang gửi...' : <><Send className="w-3.5 h-3.5" /> Gửi Phiếu Duyệt</>}
+                    {submitting ? 'Đang lưu...' : <><Check className="w-3.5 h-3.5" /> Nhập Phiếu &amp; Tính Công Ngay</>}
                   </button>
                 </div>
               </form>

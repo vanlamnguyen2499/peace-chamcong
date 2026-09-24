@@ -8,6 +8,7 @@ import { Clock, FileCheck, Table, History, User } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  if (pathname?.startsWith('/m')) return null;
   const { user, pendingApprovalsCount } = useAuth();
 
   if (!user || pathname === '/login') return null;

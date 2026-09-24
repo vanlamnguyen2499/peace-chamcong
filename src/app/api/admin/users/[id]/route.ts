@@ -14,7 +14,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await req.json();
-    const { name, phone, role, position, branchId, departmentId, managerId, annualLeaveQuota, annualLeaveUsed, isActive, password } = body;
+    const { name, phone, role, position, branchId, departmentId, managerId, annualLeaveQuota, annualLeaveUsed, overrideWorkUnits, displayOrder, isActive, password } = body;
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name.trim();
@@ -26,6 +26,8 @@ export async function PUT(
     if (managerId !== undefined) updateData.managerId = managerId || null;
     if (annualLeaveQuota !== undefined) updateData.annualLeaveQuota = Number(annualLeaveQuota);
     if (annualLeaveUsed !== undefined) updateData.annualLeaveUsed = Number(annualLeaveUsed);
+    if (overrideWorkUnits !== undefined) updateData.overrideWorkUnits = overrideWorkUnits === '' || overrideWorkUnits === null ? null : Number(overrideWorkUnits);
+    if (displayOrder !== undefined) updateData.displayOrder = Number(displayOrder);
     if (isActive !== undefined) updateData.isActive = Boolean(isActive);
 
     if (password && password.trim().length >= 6) {

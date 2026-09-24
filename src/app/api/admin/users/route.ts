@@ -31,12 +31,23 @@ export async function GET() {
         annualLeaveQuota: true,
         annualLeaveUsed: true,
         isActive: true,
+        branchId: true,
+        departmentId: true,
+        managerId: true,
         branch: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true, code: true } },
         manager: { select: { id: true, name: true, employeeCode: true } },
         createdAt: true,
       },
-      orderBy: { employeeCode: 'asc' },
+      orderBy: { name: 'asc' },
+    });
+
+    users.sort((a: any, b: any) => {
+      const deptA = a.department?.name || 'ZZZ';
+      const deptB = b.department?.name || 'ZZZ';
+      const deptComp = deptA.localeCompare(deptB, 'vi');
+      if (deptComp !== 0) return deptComp;
+      return (a.name || '').localeCompare(b.name || '', 'vi');
     });
 
     return NextResponse.json({ users });
@@ -54,7 +65,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { employeeCode, name, email, password, phone, role, position, branchId, departmentId, managerId, annualLeaveQuota } = body;
+    const { employeeCode, name, email, password, phone, role, position, branchId, departmentId, managerId, annualLeaveQuota, annualLeaveUsed, overrideWorkUnits, displayOrder } = body;
 
     if (!employeeCode || !name || !email || !password) {
       return NextResponse.json({ error: 'Vui lòng điền đủ Mã NV, Họ Tên, Email và Mật khẩu' }, { status: 400 });
@@ -85,7 +96,9 @@ export async function POST(req: NextRequest) {
         departmentId: departmentId || null,
         managerId: managerId || null,
         annualLeaveQuota: Number(annualLeaveQuota) || 12.0,
-        annualLeaveUsed: 0.0,
+        annualLeaveUsed: Number(annualLeaveUsed) || 0.0,
+        overrideWorkUnits: overrideWorkUnits === '' || overrideWorkUnits === null ? null : Number(overrideWorkUnits),
+        displayOrder: Number(displayOrder) || 0,
         isActive: true,
       },
       include: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { applyApprovalSideEffects } from '@/lib/approvalEffects';
 
 export const dynamic = 'force-dynamic';
 
@@ -362,39 +363,57 @@ export async function POST(req: NextRequest) {
               : {}),
           };
 
-          return await prisma.approvalRequest.create({
-            data: {
-              code: requestCode,
-              templateId: template.id,
-              creatorId: effectiveCreatorId,
-              currentStep: 1,
-              status: 'PENDING',
-              data: JSON.stringify(payloadData),
-              linkedAttendanceId: linkedAttendanceId || undefined,
-              paperSlipPhotoUrl: finalPhotoUrl,
-              paperSlipCode: finalSlipCode,
-              signedByApproverName: finalSignerName,
-              signedByApproverId: finalSignerId,
-              isDigitizedOffline: isOffline,
-              steps: {
-                create: stepsData,
+          return await prisma.$transaction(async (tx) => {
+            const created = await tx.approvalRequest.create({
+              data: {
+                code: requestCode,
+                templateId: template.id,
+                creatorId: effectiveCreatorId,
+                currentStep: 1,
+                status: 'APPROVED',
+                data: JSON.stringify(payloadData),
+                linkedAttendanceId: linkedAttendanceId || undefined,
+                paperSlipPhotoUrl: finalPhotoUrl,
+                paperSlipCode: finalSlipCode,
+                signedByApproverName: finalSignerName,
+                signedByApproverId: finalSignerId,
+                isDigitizedOffline: isOffline,
+                steps: {
+                  create: stepsData.map((s) => ({ ...s, status: 'APPROVED' })),
+                },
               },
-            },
-            include: {
-              steps: {
-                include: {
-                  approver: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                      employeeCode: true,
+              include: {
+                steps: {
+                  include: {
+                    approver: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        employeeCode: true,
+                      },
                     },
                   },
                 },
+                template: true,
               },
-              template: true,
-            },
+            });
+
+            // Apply business calculation side-effects immediately
+            await applyApprovalSideEffects(tx, created, template.code, payloadData, effectiveCreatorId);
+
+            // In-app notification for the creator/employee
+            await tx.notification.create({
+              data: {
+                userId: effectiveCreatorId,
+                title: `Phiếu ${requestCode} đã được ghi nhận 🎉`,
+                message: `Yêu cầu "${template.name}" đã được nhập và tự động tính công vào hệ thống.`,
+                link: `/approvals/${created.id}`,
+                type: 'APPROVAL',
+              },
+            });
+
+            return created;
           });
         } catch (err: any) {
           // Retry on Prisma unique constraint collision on 'code'
@@ -414,49 +433,18 @@ export async function POST(req: NextRequest) {
 
     const requestCode = newRequest.code;
 
-    // Send in-app notification to the first step designated approver or role
-    const firstStep = newRequest.steps[0];
-    if (firstStep) {
-      if (firstStep.approverId) {
-        await prisma.notification.create({
-          data: {
-            userId: firstStep.approverId,
-            title: `Phiếu mới cần duyệt: ${template.name}`,
-            message: `${user.name} (${user.employeeCode}) vừa chỉ định bạn duyệt yêu cầu ${requestCode}.`,
-            link: `/approvals/${newRequest.id}`,
-            type: 'APPROVAL',
-          },
-        });
-      } else if (firstStep.approverRole) {
-        const approversWithRole = await prisma.user.findMany({
-          where: { role: firstStep.approverRole, isActive: true },
-        });
-        for (const approver of approversWithRole) {
-          await prisma.notification.create({
-            data: {
-              userId: approver.id,
-              title: `Phiếu mới cần duyệt: ${template.name}`,
-              message: `${user.name} (${user.employeeCode}) vừa gửi yêu cầu ${requestCode}.`,
-              link: `/approvals/${newRequest.id}`,
-              type: 'APPROVAL',
-            },
-          });
-        }
-      }
-    }
-
     // Dispatch Telegram Bot alert
-    const telegramMsg = `🔔 <b>[PHIẾU MỚI CẦN DUYỆT]</b>\n` +
+    const telegramMsg = `✅ <b>[PHIẾU MỚI ĐÃ NHẬP & TỰ ĐỘNG TÍNH CÔNG]</b>\n` +
       `📌 <b>Loại phiếu:</b> ${template.name}\n` +
-      `👤 <b>Người tạo:</b> ${user.name} (${user.employeeCode} - ${user.position || 'Nhân viên'})\n` +
+      `👤 <b>Nhân sự:</b> ${creatorUser.name} (${creatorUser.employeeCode} - ${creatorUser.position || 'Nhân viên'})\n` +
       `🔖 <b>Mã phiếu:</b> <code>${requestCode}</code>\n` +
-      `📝 <b>Lý do:</b> ${data.reason || data.purpose || 'Xem chi tiết trong hệ thống'}\n` +
-      `👉 <i>Vui lòng vào hệ thống để xem và phê duyệt.</i>`;
+      `📝 <b>Nội dung:</b> ${data.reason || data.purpose || 'Đã áp dụng vào bảng công'}\n` +
+      `⚡ <i>Trạng thái: Đã duyệt & tính công tự động.</i>`;
     sendTelegramNotification(telegramMsg).catch(() => {});
 
     return NextResponse.json({
       success: true,
-      message: 'Gửi phiếu phê duyệt thành công!',
+      message: 'Nhập phiếu và tự động tính công thành công!',
       request: newRequest,
     });
   } catch (error: any) {

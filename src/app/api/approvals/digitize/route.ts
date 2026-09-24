@@ -81,7 +81,7 @@ async function applyDigitizedSlipSideEffects(
       const outDate = new Date(`${workDate}T${outTimeStr}:00`);
 
       // Check schedule to get shift workUnits
-      const schedule = await tx.userShiftSchedule.findUnique({
+      const schedule = await tx.userShiftSchedule.findFirst({
         where: {
           userId_workDate: {
             userId: creatorId,

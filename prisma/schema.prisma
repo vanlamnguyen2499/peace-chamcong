@@ -19,6 +19,11 @@ model User {
   position         String?   // Chức danh: Trưởng phòng, Chuyên viên, Nhân viên...
   annualLeaveQuota Float     @default(12.0)
   annualLeaveUsed  Float     @default(0.0)
+  overrideWorkUnits Float?   // Nếu có giá trị, dùng làm công chuẩn cố định
+  displayOrder     Int       @default(0)
+  weekdayShifts    Float     @default(3.0)
+  sundayShifts     Float     @default(2.0)
+  weeklySchedule   String?   // JSON lưu khung ca cố định theo thứ { "0": "shiftId/OFF", "1": "shiftId", ... }
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -107,7 +112,7 @@ model UserShiftSchedule {
   isOffDay  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@unique([userId, workDate])
+  @@unique([userId, workDate, shiftId])
 }
 
 model Attendance {

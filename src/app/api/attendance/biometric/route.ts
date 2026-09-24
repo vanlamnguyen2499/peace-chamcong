@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { calculateAttendanceMetrics, getWorkDateString } from '@/lib/time';
+import { calculateAttendanceMetrics, getWorkDateString, resolveActualShift } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
@@ -229,6 +229,8 @@ export async function POST(req: NextRequest) {
 
     const results: any[] = [];
     let updatedCount = 0;
+    
+    const allActiveShifts = await prisma.shift.findMany({ where: { isActive: true } });
 
     for (const key of Object.values(grouped)) {
       const targetUser = await prisma.user.findFirst({
@@ -247,28 +249,13 @@ export async function POST(req: NextRequest) {
       const checkInTime = key.timestamps[0];
       const checkOutTime = key.timestamps.length > 1 ? key.timestamps[key.timestamps.length - 1] : null;
 
-      // Find user schedule or default shift for the day
-      const schedule = await prisma.userShiftSchedule.findUnique({
-        where: {
-          userId_workDate: {
-            userId: targetUser.id,
-            workDate: key.workDate,
-          },
-        },
+      // Find user schedule or dynamically resolve the actual shift based on check-in time
+      const schedule = await prisma.userShiftSchedule.findFirst({
+        where: { userId: targetUser.id, workDate: key.workDate  },
         include: { shift: true },
       });
 
-      let shift: any = schedule?.shift;
-      if (!shift) {
-        // Default to CA_ALL_DAY or CA_1_SANG
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_ALL_DAY' } });
-        if (!shift) {
-          shift = await prisma.shift.findFirst({ where: { code: 'CA_1_SANG' } });
-        }
-        if (!shift) {
-          shift = await prisma.shift.findFirst({ where: { isActive: true } });
-        }
-      }
+      let shift = resolveActualShift(checkInTime, checkOutTime, schedule?.shift, allActiveShifts);
 
       const metrics = shift
         ? calculateAttendanceMetrics(checkInTime, checkOutTime, shift)
@@ -283,12 +270,7 @@ export async function POST(req: NextRequest) {
           };
 
       const attendance = await prisma.attendance.upsert({
-        where: {
-          userId_workDate: {
-            userId: targetUser.id,
-            workDate: key.workDate,
-          },
-        },
+        where: { userId_workDate: { userId: targetUser.id, workDate: key.workDate } },
         update: {
           shiftId: shift?.id,
           checkInTime,

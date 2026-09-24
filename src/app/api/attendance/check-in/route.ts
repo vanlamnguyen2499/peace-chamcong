@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isWithinBranchRadius } from '@/lib/geo';
-import { getWorkDateString, calculateAttendanceMetrics } from '@/lib/time';
+import { getWorkDateString, calculateAttendanceMetrics, resolveActualShift } from '@/lib/time';
 import { saveBase64Image } from '@/lib/upload';
 
 export async function POST(req: NextRequest) {
@@ -27,12 +27,7 @@ export async function POST(req: NextRequest) {
 
     // Check if already checked in
     const existing = await prisma.attendance.findUnique({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+      where: { userId_workDate: { userId: user.id, workDate: todayStr } },
     });
 
     if (existing && existing.checkInTime) {
@@ -65,42 +60,20 @@ export async function POST(req: NextRequest) {
     const photoUrl = await saveBase64Image(photo, `checkin_${user.employeeCode}`);
 
     // Resolve shift
-    let shift = null;
-    const schedule = await prisma.userShiftSchedule.findUnique({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+    const schedule = await prisma.userShiftSchedule.findFirst({
+      where: { userId: user.id, workDate: todayStr  },
       include: { shift: true },
     });
 
-    if (schedule && schedule.shift) {
-      shift = schedule.shift;
-    } else {
-      const dayOfWeek = new Date().getDay();
-      if (dayOfWeek === 0) {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_CN_SANG', isActive: true } });
-      } else {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_1_SANG', isActive: true } });
-      }
-      if (!shift) {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_ALL_DAY', isActive: true } });
-      }
-      if (!shift) {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_HC', isActive: true } });
-      }
-      if (!shift) {
-        shift = await prisma.shift.findFirst({ where: { isActive: true } });
-      }
-    }
+    const allActiveShifts = await prisma.shift.findMany({ where: { isActive: true } });
+    const now = body.time ? new Date(body.time) : new Date();
+    
+    let shift = resolveActualShift(now, null, schedule?.shift, allActiveShifts);
 
     if (!shift) {
       return NextResponse.json({ error: 'Không tìm thấy ca làm việc' }, { status: 400 });
     }
 
-    const now = body.time ? new Date(body.time) : new Date();
     const metrics = calculateAttendanceMetrics(now, null, shift);
 
     const checkInStatus = geoCheck.isInside
@@ -112,12 +85,7 @@ export async function POST(req: NextRequest) {
     const userAgent = req.headers.get('user-agent') || 'Unknown Device';
 
     const attendance = await prisma.attendance.upsert({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+      where: { userId_workDate: { userId: user.id, workDate: todayStr } },
       update: {
         branchId: branch.id,
         shiftId: shift.id,

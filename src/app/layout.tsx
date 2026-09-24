@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import LayoutWrapper from '@/components/LayoutWrapper';
 
 export const metadata: Metadata = {
   title: 'PEACE GapoWork - Hệ thống Chấm công & Phê duyệt Doanh nghiệp',
@@ -27,9 +28,9 @@ export default function RootLayout({
           <Navbar />
           <div className="flex-1 flex w-full">
             <Sidebar />
-            <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 max-w-7xl mx-auto w-full">
+            <LayoutWrapper>
               {children}
-            </main>
+            </LayoutWrapper>
           </div>
           <MobileBottomNav />
         </AuthProvider>

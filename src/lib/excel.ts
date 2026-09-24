@@ -15,6 +15,8 @@ export interface TimesheetSummaryRow {
   paidLeaveDays: number;     // Nghỉ phép hưởng lương
   unpaidLeaveDays: number;   // Nghỉ không lương
   finalPayableUnits: number; // Tổng công tính lương
+  sundayMealAllowance: number; // Phụ cấp cơm Chủ Nhật
+  remainingLeave: number;    // Phép tồn còn lại
 }
 
 export interface TimesheetDailyDetail {
@@ -47,7 +49,7 @@ export async function generateTimesheetExcelBuffer(
   const wsSummary = workbook.addWorksheet(`Tổng Hợp T${month}-${year}`);
 
   // Header Title
-  wsSummary.mergeCells('A1:N1');
+  wsSummary.mergeCells('A1:O1');
   const titleCell = wsSummary.getCell('A1');
   titleCell.value = `BẢNG TỔNG HỢP CÔNG VÀ GIỜ LÀM VIỆC - THÁNG ${month}/${year}`;
   titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -56,7 +58,7 @@ export async function generateTimesheetExcelBuffer(
   wsSummary.getRow(1).height = 35;
 
   // Subtitle
-  wsSummary.mergeCells('A2:N2');
+  wsSummary.mergeCells('A2:O2');
   const subCell = wsSummary.getCell('A2');
   subCell.value = `Ngày xuất báo cáo: ${new Date().toLocaleDateString('vi-VN')} | Hệ thống Chấm công & Phê duyệt`;
   subCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF64748B' } };
@@ -73,11 +75,13 @@ export async function generateTimesheetExcelBuffer(
     'Chức Danh',
     'Công Chuẩn',
     'Công Thực Tế',
+    'Phụ Cấp Cơm CN',
     'Tổng Giờ Làm (h)',
     'Đi Muộn (phút)',
     'Về Sớm (phút)',
     'Giờ Tăng Ca OT (x2)',
     'Nghỉ Phép (ngày)',
+    'Phép Tồn Còn Lại',
     'TỔNG CÔNG TÍNH LƯƠNG',
   ];
 
@@ -106,11 +110,13 @@ export async function generateTimesheetExcelBuffer(
       row.position,
       row.standardWorkUnits,
       row.actualWorkUnits,
+      row.sundayMealAllowance,
       row.totalWorkHours,
       row.lateMinutes,
       row.earlyMinutes,
       row.otHours,
       row.paidLeaveDays,
+      row.remainingLeave,
       row.finalPayableUnits,
     ]);
     dataRow.height = 22;

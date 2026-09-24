@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification } from '@/lib/telegram';
-import { calculateAttendanceMetrics } from '@/lib/time';
+import { calculateAttendanceMetrics, resolveActualShift } from '@/lib/time';
 
 class ActionError extends Error {
   statusCode: number;
@@ -323,34 +323,23 @@ export async function POST(
           const inDate = new Date(`${workDate}T${inTimeStr}:00`);
           const outDate = new Date(`${workDate}T${outTimeStr}:00`);
 
-          // Check if employee has an assigned schedule for that work date
-          const schedule = await tx.userShiftSchedule.findUnique({
+          const schedule = await tx.userShiftSchedule.findFirst({
             where: {
-              userId_workDate: {
-                userId: freshRequest.creatorId,
-                workDate: workDate,
-              },
+              userId: freshRequest.creatorId,
+              workDate: workDate,
             },
             include: { shift: true },
           });
 
-          let shift: any = schedule?.shift;
+          const allActiveShifts = await tx.shift.findMany({ where: { isActive: true } });
+          let shift = resolveActualShift(inDate, outDate, schedule?.shift, allActiveShifts);
+
           if (!shift && formData.shiftId) {
-            shift = await tx.shift.findUnique({ where: { id: formData.shiftId } });
+            shift = allActiveShifts.find(s => s.id === formData.shiftId);
           }
           if (!shift && formData.shiftCode) {
-            shift = await tx.shift.findFirst({ where: { code: formData.shiftCode } });
+            shift = allActiveShifts.find(s => s.code === formData.shiftCode);
           }
-          if (!shift) {
-            shift = await tx.shift.findFirst({ where: { code: 'CA_ALL_DAY' } });
-          }
-          if (!shift) {
-            shift = await tx.shift.findFirst({ where: { code: 'CA_1_SANG' } });
-          }
-          if (!shift) {
-            shift = await tx.shift.findFirst({ where: { isActive: true } });
-          }
-
           const targetUnits = shift?.workUnits || 1.0;
           const targetHours = shift?.minWorkHours || 8.0;
 

@@ -11,40 +11,28 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { userIds, shiftId, startDate, endDate, excludeSundays } = body;
+    const { userIds, weekdayShifts, sundayShifts } = body;
 
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !shiftId || !startDate || !endDate) {
-      return NextResponse.json({ error: 'Vui lòng chọn nhân viên, ca làm việc và khoảng thời gian' }, { status: 400 });
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return NextResponse.json({ error: 'Vui lòng chọn nhân viên' }, { status: 400 });
     }
 
-    const dates = eachDayOfInterval({
-      start: parseISO(startDate),
-      end: parseISO(endDate),
-    });
-
-    let count = 0;
-    for (const userId of userIds) {
-      for (const d of dates) {
-        if (excludeSundays && d.getDay() === 0) continue; // Skip Sunday
-
-        const workDate = format(d, 'yyyy-MM-dd');
-        await prisma.userShiftSchedule.upsert({
-          where: {
-            userId_workDate: { userId, workDate },
-          },
-          update: { shiftId, isOffDay: false },
-          create: { userId, shiftId, workDate, isOffDay: false },
-        });
-        count++;
+    await prisma.user.updateMany({
+      where: {
+        id: { in: userIds }
+      },
+      data: {
+        weekdayShifts: Number(weekdayShifts) || 0,
+        sundayShifts: Number(sundayShifts) || 0,
       }
-    }
+    });
 
     return NextResponse.json({
       success: true,
-      message: `Đã phân ca thành công cho ${userIds.length} nhân sự (${count} lượt ca).`,
+      message: `Đã cài đặt định mức ca thành công cho ${userIds.length} nhân sự.`,
     });
   } catch (error: any) {
     console.error('Batch schedule error:', error);
-    return NextResponse.json({ error: error.message || 'Lỗi phân ca' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Lỗi cài đặt ca' }, { status: 500 });
   }
 }

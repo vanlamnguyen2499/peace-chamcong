@@ -26,13 +26,20 @@ export async function GET(req: NextRequest) {
     if (branchId) userWhere.branchId = branchId;
     if (departmentId) userWhere.departmentId = departmentId;
 
-    const users = await prisma.user.findMany({
+    const rawUsers = await prisma.user.findMany({
       where: userWhere,
       include: {
         branch: true,
         department: true,
       },
-      orderBy: { employeeCode: 'asc' },
+    });
+
+    const users = [...rawUsers].sort((a, b) => {
+      const deptA = a.department?.name || 'ZZZ';
+      const deptB = b.department?.name || 'ZZZ';
+      const deptComp = deptA.localeCompare(deptB, 'vi');
+      if (deptComp !== 0) return deptComp;
+      return (a.name || '').localeCompare(b.name || '', 'vi');
     });
 
     const userIds = users.map((u) => u.id);
@@ -43,16 +50,33 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    const schedules = await prisma.userShiftSchedule.findMany({
+      where: {
+        userId: { in: userIds },
+        workDate: { startsWith: monthPrefix },
+      },
+      include: {
+        shift: true,
+      }
+    });
+
     const attMap: { [userId: string]: { [workDate: string]: any } } = {};
     attendances.forEach((att) => {
       if (!attMap[att.userId]) attMap[att.userId] = {};
       attMap[att.userId][att.workDate] = att;
     });
 
-    let standardWorkDays = 0;
-    days.forEach((dayStr) => {
-      const d = new Date(dayStr);
-      if (d.getDay() !== 0) standardWorkDays++;
+    const scheduleMap: { [userId: string]: any[] } = {};
+    schedules.forEach((sch) => {
+      if (!scheduleMap[sch.userId]) scheduleMap[sch.userId] = [];
+      scheduleMap[sch.userId].push(sch);
+    });
+
+    const allShifts = await prisma.shift.findMany({ where: { isActive: true } });
+    const shiftMapById: { [id: string]: any } = {};
+    allShifts.forEach((s) => {
+      shiftMapById[s.id] = s;
+      shiftMapById[s.code] = s;
     });
 
     const summaryList: TimesheetSummaryRow[] = [];
@@ -60,31 +84,93 @@ export async function GET(req: NextRequest) {
 
     users.forEach((u) => {
       const userAtts = attMap[u.id] || {};
+      const userSchedules = scheduleMap[u.id] || [];
+      
+      let computedStandardWorkUnits = 0;
+      if (u.weeklySchedule) {
+        try {
+          const weekly = JSON.parse(u.weeklySchedule);
+          days.forEach((dayStr) => {
+            const d = new Date(dayStr);
+            const dow = String(d.getDay());
+            if (dow === '0') {
+              if (!weekly.sundayFlexible?.enabled) {
+                const shiftIdOrOff = weekly['0'];
+                if (shiftIdOrOff && shiftIdOrOff !== 'OFF' && shiftIdOrOff !== 'FLEXIBLE') {
+                  const sObj = shiftMapById[shiftIdOrOff];
+                  if (sObj) {
+                    computedStandardWorkUnits += (sObj.workUnits || 1);
+                  }
+                }
+              }
+            } else {
+              const shiftIdOrOff = weekly[dow];
+              if (shiftIdOrOff && shiftIdOrOff !== 'OFF') {
+                const sObj = shiftMapById[shiftIdOrOff];
+                if (sObj) {
+                  computedStandardWorkUnits += (sObj.workUnits || 1);
+                }
+              }
+            }
+          });
+
+          if (weekly.sundayFlexible?.enabled && Number(weekly.sundayFlexible.shiftsCount) > 0) {
+            const flexShift = shiftMapById[weekly.sundayFlexible.shiftId];
+            const flexShiftUnits = flexShift ? (flexShift.workUnits || 1) : 1;
+            computedStandardWorkUnits += Number(weekly.sundayFlexible.shiftsCount) * flexShiftUnits;
+          }
+        } catch (e) {
+          console.error('Error parsing weeklySchedule in export:', e);
+        }
+      } else if (userSchedules.length > 0) {
+        userSchedules.forEach((sch) => {
+          if (!sch.isOffDay && sch.shift) {
+            computedStandardWorkUnits += (sch.shift.workUnits || 1);
+          }
+        });
+      } else {
+        days.forEach((dayStr) => {
+          const d = new Date(dayStr);
+          if (d.getDay() === 0) {
+            computedStandardWorkUnits += (u.sundayShifts ?? 0);
+          } else {
+            computedStandardWorkUnits += (u.weekdayShifts ?? 0);
+          }
+        });
+      }
+      const standardWorkUnits = u.overrideWorkUnits !== null ? u.overrideWorkUnits : computedStandardWorkUnits;
+      
       let actualWorkUnits = 0;
       let totalWorkHours = 0;
       let totalLateMinutes = 0;
       let totalEarlyMinutes = 0;
       let totalOtHours = 0;
-      let paidLeaveDays = 0;
-      let unpaidLeaveDays = 0;
+      let paidLeaveUnits = 0;
+      let unpaidLeaveUnits = 0;
+      let sundayMealAllowance = 0;
 
       const dailyData: { [day: number]: any } = {};
 
       days.forEach((dayStr) => {
+        const d = new Date(dayStr);
+        const isSunday = d.getDay() === 0;
         const dayNumber = parseInt(dayStr.split('-')[2], 10);
         const att = userAtts[dayStr];
 
         if (att) {
           if (att.status === 'LEAVE') {
             if (att.calculatedWorkUnits > 0) {
-              paidLeaveDays++;
+              paidLeaveUnits += att.calculatedWorkUnits;
             } else {
-              unpaidLeaveDays++;
+              unpaidLeaveUnits += 1.0;
             }
           } else if (att.status === 'INVALID' || att.status === 'ABSENT') {
-            // Không tính công cho bản ghi chấm công lỗi hoặc vắng mặt chưa được giải trình
+            // Không tính công
           } else {
             actualWorkUnits += att.calculatedWorkUnits || 0;
+            if (isSunday && att.calculatedWorkUnits >= 2.0) {
+              sundayMealAllowance += 1;
+            }
           }
 
           totalWorkHours += att.workHours || 0;
@@ -101,7 +187,7 @@ export async function GET(req: NextRequest) {
         }
       });
 
-      const finalPayableUnits = Math.round((actualWorkUnits + paidLeaveDays) * 10) / 10;
+      const finalPayableUnits = Math.round((actualWorkUnits + paidLeaveUnits) * 10) / 10;
 
       summaryList.push({
         employeeCode: u.employeeCode,
@@ -109,14 +195,16 @@ export async function GET(req: NextRequest) {
         department: u.department?.name || '-',
         branch: u.branch?.name || '-',
         position: u.position || '-',
-        standardWorkUnits: standardWorkDays,
+        standardWorkUnits: Math.round(standardWorkUnits * 10) / 10,
         actualWorkUnits: Math.round(actualWorkUnits * 10) / 10,
+        sundayMealAllowance,
         totalWorkHours: Math.round(totalWorkHours * 10) / 10,
         lateMinutes: totalLateMinutes,
         earlyMinutes: totalEarlyMinutes,
         otHours: Math.round(totalOtHours * 10) / 10,
-        paidLeaveDays: Math.round(paidLeaveDays * 10) / 10,
-        unpaidLeaveDays,
+        paidLeaveDays: Math.round(paidLeaveUnits * 10) / 10,
+        unpaidLeaveDays: Math.round(unpaidLeaveUnits * 10) / 10,
+        remainingLeave: Math.max(0, u.annualLeaveQuota - u.annualLeaveUsed),
         finalPayableUnits,
       });
 

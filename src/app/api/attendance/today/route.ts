@@ -16,12 +16,7 @@ export async function GET() {
 
     // 1. Get today's attendance record
     const attendance = await prisma.attendance.findUnique({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+      where: { userId_workDate: { userId: user.id, workDate: todayStr } },
       include: {
         shift: true,
         branch: true,
@@ -30,13 +25,8 @@ export async function GET() {
 
     // 2. Get today's schedule or fallback to default standard shift
     let shift = null;
-    const schedule = await prisma.userShiftSchedule.findUnique({
-      where: {
-        userId_workDate: {
-          userId: user.id,
-          workDate: todayStr,
-        },
-      },
+    const schedule = await prisma.userShiftSchedule.findFirst({
+      where: { userId: user.id, workDate: todayStr  },
       include: { shift: true },
     });
 

@@ -41,6 +41,9 @@ export default function AdminUsersPage() {
     departmentId: '',
     managerId: '',
     annualLeaveQuota: 12,
+    annualLeaveUsed: 0,
+    overrideWorkUnits: '',
+    displayOrder: 0,
   });
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -77,10 +80,10 @@ export default function AdminUsersPage() {
   const handleOpenCreate = () => {
     setEditingUser(null);
     setFormData({
-      employeeCode: `NV00${users.length + 1}`,
+      employeeCode: '',
       name: '',
       email: '',
-      password: 'user123',
+      password: '',
       phone: '',
       role: 'EMPLOYEE',
       position: '',
@@ -88,6 +91,9 @@ export default function AdminUsersPage() {
       departmentId: departments[0]?.id || '',
       managerId: '',
       annualLeaveQuota: 12,
+      annualLeaveUsed: 0,
+      overrideWorkUnits: '',
+      displayOrder: 0,
     });
     setModalError(null);
     setShowModal(true);
@@ -96,7 +102,9 @@ export default function AdminUsersPage() {
   const handleOpenEdit = (u: any) => {
     setEditingUser(u);
     setFormData({
+      employeeCode: u.employeeCode,
       name: u.name,
+      email: u.email,
       phone: u.phone || '',
       role: u.role,
       position: u.position || '',
@@ -104,6 +112,9 @@ export default function AdminUsersPage() {
       departmentId: u.department?.id || '',
       managerId: u.manager?.id || '',
       annualLeaveQuota: u.annualLeaveQuota,
+      annualLeaveUsed: u.annualLeaveUsed,
+      overrideWorkUnits: u.overrideWorkUnits ?? '',
+      displayOrder: u.displayOrder || 0,
       password: '',
     });
     setModalError(null);
@@ -403,6 +414,18 @@ export default function AdminUsersPage() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Thứ tự hiển thị (Sort)</label>
+                  <input
+                    type="number"
+                    value={formData.displayOrder}
+                    onChange={(e) => setFormData({ ...formData, displayOrder: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Quỹ phép năm (ngày)</label>
                   <input
                     type="number"
@@ -411,6 +434,31 @@ export default function AdminUsersPage() {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Phép đã dùng</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.annualLeaveUsed}
+                    onChange={(e) => setFormData({ ...formData, annualLeaveUsed: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Công chuẩn cố định</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="Bỏ trống để tự động"
+                    value={formData.overrideWorkUnits}
+                    onChange={(e) => setFormData({ ...formData, overrideWorkUnits: e.target.value ? Number(e.target.value) : '' })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="hidden"></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

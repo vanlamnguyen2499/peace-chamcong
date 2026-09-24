@@ -185,3 +185,68 @@ export function getDaysInMonth(year: number, month: number): string[] {
   const days = eachDayOfInterval({ start, end });
   return days.map((d) => format(d, 'yyyy-MM-dd'));
 }
+
+/**
+ * Dynamically resolves the actual shift a user is working based on their check-in/out time.
+ * This supports the "swapped shift" scenario where a user works a different shift than scheduled.
+ */
+export function resolveActualShift(checkInTime: Date, checkOutTime: Date | null, scheduledShift: any, allShifts: any[]): any {
+  const checkInMin = dateToMinutes(checkInTime);
+  
+  let workDurationMin = 0;
+  if (checkOutTime) {
+    const checkOutMin = dateToMinutes(checkOutTime);
+    workDurationMin = Math.max(0, (checkOutMin < checkInMin ? checkOutMin + 24 * 60 : checkOutMin) - checkInMin);
+  }
+
+  // 1. If scheduledShift exists, check if it's a good fit
+  if (scheduledShift) {
+    const scheduledStartMin = timeStringToMinutes(scheduledShift.startTime);
+    const startDiff = Math.abs(checkInMin - scheduledStartMin);
+    
+    let durationIsOkay = true;
+    if (workDurationMin > 0) {
+       let scheduledEndMin = timeStringToMinutes(scheduledShift.endTime);
+       if (scheduledEndMin < scheduledStartMin) scheduledEndMin += 24 * 60;
+       const scheduledDuration = scheduledEndMin - scheduledStartMin;
+       // If they worked > 2.5 hours longer/shorter than scheduled, maybe they swapped.
+       if (Math.abs(workDurationMin - scheduledDuration) > 150) {
+         durationIsOkay = false;
+       }
+    }
+
+    // If they check in within 2.5 hours and duration is roughly expected, assume they are working it
+    if (startDiff <= 150 && durationIsOkay) {
+      return scheduledShift;
+    }
+  }
+
+  // 2. Otherwise, find the best matching shift based on BOTH checkInTime and duration
+  let bestShift = scheduledShift || allShifts[0];
+  let minPenalty = Infinity;
+
+  for (const shift of allShifts) {
+    const shiftStartMin = timeStringToMinutes(shift.startTime);
+    let startDiff = Math.abs(checkInMin - shiftStartMin);
+    // Handle overnight start time wrapping
+    if (startDiff > 12 * 60) startDiff = Math.abs(startDiff - 24 * 60);
+    
+    let durationDiff = 0;
+    if (workDurationMin > 0) {
+       let shiftEndMin = timeStringToMinutes(shift.endTime);
+       if (shiftEndMin < shiftStartMin) shiftEndMin += 24 * 60;
+       const shiftDuration = shiftEndMin - shiftStartMin;
+       durationDiff = Math.abs(workDurationMin - shiftDuration);
+    }
+    
+    // Start time is weighted heavily (2x).
+    const penalty = (startDiff * 2) + durationDiff;
+    
+    if (penalty < minPenalty) {
+      minPenalty = penalty;
+      bestShift = shift;
+    }
+  }
+  
+  return bestShift;
+}

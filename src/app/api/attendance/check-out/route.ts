@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isWithinBranchRadius } from '@/lib/geo';
-import { getWorkDateString, calculateAttendanceMetrics } from '@/lib/time';
+import { getWorkDateString, calculateAttendanceMetrics, resolveActualShift } from '@/lib/time';
 import { saveBase64Image } from '@/lib/upload';
 
 export async function POST(req: NextRequest) {
@@ -63,30 +63,22 @@ export async function POST(req: NextRequest) {
     // Save selfie photo
     const photoUrl = await saveBase64Image(photo, `checkout_${user.employeeCode}`);
 
-    // Resolve shift
-    let shift = existing.shift;
-    if (!shift) {
-      const dayOfWeek = new Date().getDay();
-      if (dayOfWeek === 0) {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_CN_SANG', isActive: true } });
-      } else {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_1_SANG', isActive: true } });
-      }
-      if (!shift) {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_ALL_DAY', isActive: true } });
-      }
-      if (!shift) {
-        shift = await prisma.shift.findFirst({ where: { code: 'CA_HC', isActive: true } });
-      }
-      if (!shift) {
-        shift = await prisma.shift.findFirst({ where: { isActive: true } });
-      }
-    }
+    // Resolve shift dynamically again now that we have check-out time
+    const now = body.time ? new Date(body.time) : new Date();
+    const allActiveShifts = await prisma.shift.findMany({ where: { isActive: true } });
+    
+    // Attempt to get the originally scheduled shift
+    const schedule = await prisma.userShiftSchedule.findFirst({
+      where: { userId: user.id, workDate: todayStr },
+      include: { shift: true },
+    });
+
+    let shift = resolveActualShift(existing.checkInTime!, now, schedule?.shift, allActiveShifts);
+
     if (!shift) {
       return NextResponse.json({ error: 'Không tìm thấy ca làm việc' }, { status: 400 });
     }
 
-    const now = body.time ? new Date(body.time) : new Date();
     const metrics = calculateAttendanceMetrics(existing.checkInTime, now, shift);
 
     const checkOutStatus = geoCheck.isInside
@@ -103,6 +95,7 @@ export async function POST(req: NextRequest) {
     const updatedAttendance = await prisma.attendance.update({
       where: { id: existing.id },
       data: {
+        shiftId: shift.id,
         checkOutTime: now,
         checkOutLat: Number(latitude),
         checkOutLng: Number(longitude),

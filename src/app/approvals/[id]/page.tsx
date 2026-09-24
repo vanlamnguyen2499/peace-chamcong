@@ -71,19 +71,75 @@ export default function ApprovalDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
-          note: noteStr || (action === 'APPROVE' ? approveNote : rejectReason),
         }),
       });
+      if (res.ok) {
+        fetchDetail();
+        setShowRejectModal(false);
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Lỗi xử lý');
+      }
+    } catch (e) {
+      alert('Lỗi kết nối');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
+  const handleDelete = async () => {
+    const isHrOrStaff = user?.role === 'HR_ADMIN' || user?.role === 'EMPLOYEE';
+    const msg = isHrOrStaff
+      ? 'Xác nhận gửi yêu cầu xóa phiếu do nhập nhầm cho Quản lý & Admin duyệt?'
+      : 'Bạn có chắc chắn muốn xóa phiếu này? Dữ liệu công hoặc phép sẽ bị hoàn tác!';
+
+    if (!confirm(msg)) return;
+
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/approvals/${id}`, { method: 'DELETE' });
+      const d = await res.json();
+      if (res.ok) {
+        alert(d.message || 'Thành công!');
+        if (isHrOrStaff) {
+          window.location.reload(); // Reload to show PENDING_DELETE state
+        } else {
+          router.push('/approvals');
+        }
+      } else {
+        alert(d.error || 'Lỗi khi thao tác');
+      }
+    } catch (e) {
+      alert('Lỗi kết nối');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleManagerDeleteAction = async (isApprove: boolean) => {
+    const actionName = isApprove ? 'Duyệt Xóa (Hoàn tác công & phép)' : 'Từ chối Xóa (Khôi phục)';
+    if (!confirm(`Bạn chắc chắn muốn ${actionName} phiếu này?`)) return;
+
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/admin/approvals/delete-requests', {
+        method: isApprove ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestIds: [id] }),
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Lỗi thao tác');
-
-      setShowRejectModal(false);
-      setRejectReason('');
-      setApproveNote('');
-      await fetchDetail();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi thao tác phê duyệt');
+      if (res.ok) {
+        alert(data.message);
+        if (isApprove) {
+          router.push('/admin/delete-requests');
+        } else {
+          fetchDetail();
+        }
+      } else {
+        alert(data.error || 'Có lỗi xảy ra');
+      }
+    } catch (e) {
+      alert('Lỗi kết nối');
     } finally {
       setActionLoading(false);
     }
@@ -133,9 +189,46 @@ export default function ApprovalDetailPage() {
         >
           <ArrowLeft className="w-4 h-4" /> Quay lại danh sách
         </Link>
-        <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full border border-slate-200">
-          {request.code}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full border border-slate-200">
+            {request.code}
+          </span>
+          {request.status !== 'PENDING_DELETE' && (user?.role === 'SUPER_ADMIN' || user?.role === 'HR_ADMIN' || user?.role === 'MANAGER' || request.creatorId === user?.id) && (
+            <button
+              onClick={handleDelete}
+              disabled={actionLoading}
+              className="text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-full border border-rose-200 flex items-center gap-1 transition-all disabled:opacity-50"
+            >
+              <X className="w-3.5 h-3.5" /> Xóa phiếu (Do nhập nhầm)
+            </button>
+          )}
+
+          {request.status === 'PENDING_DELETE' && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200 flex items-center gap-1">
+                ⏳ Chờ Quản lý &amp; Admin duyệt xóa
+              </span>
+              {(user?.role === 'SUPER_ADMIN' || user?.role === 'MANAGER') && (
+                <>
+                  <button
+                    onClick={() => handleManagerDeleteAction(false)}
+                    disabled={actionLoading}
+                    className="text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm disabled:opacity-50"
+                  >
+                    Từ chối
+                  </button>
+                  <button
+                    onClick={() => handleManagerDeleteAction(true)}
+                    disabled={actionLoading}
+                    className="text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 px-3 py-1.5 rounded-full shadow-sm disabled:opacity-50"
+                  >
+                    Duyệt Xóa
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Request Header Card */}

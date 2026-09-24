@@ -32,6 +32,8 @@ export async function GET(req: NextRequest) {
         role: true,
         position: true,
         avatarUrl: true,
+        branchId: true,
+        departmentId: true,
         department: {
           select: {
             id: true,
@@ -48,9 +50,16 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: [
-        { role: 'asc' },
         { name: 'asc' },
       ],
+    });
+
+    users.sort((a: any, b: any) => {
+      const deptA = a.department?.name || 'ZZZ';
+      const deptB = b.department?.name || 'ZZZ';
+      const deptComp = deptA.localeCompare(deptB, 'vi');
+      if (deptComp !== 0) return deptComp;
+      return (a.name || '').localeCompare(b.name || '', 'vi');
     });
 
     // Determine recommended approvers based on current user context

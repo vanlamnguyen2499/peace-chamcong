@@ -30,6 +30,7 @@ export default function AdminTimesheetPage() {
   const [branchId, setBranchId] = useState<string>('');
   const [departmentId, setDepartmentId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'DEPT_NAME_ASC' | 'NAME_ASC' | 'EMP_CODE_ASC' | 'PAYABLE_DESC' | 'STANDARD_DESC'>('DEPT_NAME_ASC');
 
   const [branches, setBranches] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
@@ -55,6 +56,32 @@ export default function AdminTimesheetPage() {
   const [importTab, setImportTab] = useState<'file' | 'devices' | 'text'>('file');
   const [rawTextLog, setRawTextLog] = useState<string>('');
   const [importingLog, setImportingLog] = useState<boolean>(false);
+
+  // Compute sorted & filtered matrix
+  const processedMatrix = React.useMemo(() => {
+    if (!timesheetData?.matrix) return [];
+    const list = [...timesheetData.matrix];
+
+    if (sortBy === 'DEPT_NAME_ASC') {
+      list.sort((a, b) => {
+        const deptA = a.user?.department || 'ZZZ';
+        const deptB = b.user?.department || 'ZZZ';
+        const deptComp = deptA.localeCompare(deptB, 'vi');
+        if (deptComp !== 0) return deptComp;
+        return (a.user?.name || '').localeCompare(b.user?.name || '', 'vi');
+      });
+    } else if (sortBy === 'NAME_ASC') {
+      list.sort((a, b) => (a.user?.name || '').localeCompare(b.user?.name || '', 'vi'));
+    } else if (sortBy === 'EMP_CODE_ASC') {
+      list.sort((a, b) => (a.user?.employeeCode || '').localeCompare(b.user?.employeeCode || '', 'vi'));
+    } else if (sortBy === 'PAYABLE_DESC') {
+      list.sort((a, b) => (b.summary?.finalPayableUnits || 0) - (a.summary?.finalPayableUnits || 0));
+    } else if (sortBy === 'STANDARD_DESC') {
+      list.sort((a, b) => (b.summary?.standardWorkUnits || 0) - (a.summary?.standardWorkUnits || 0));
+    }
+
+    return list;
+  }, [timesheetData, sortBy]);
 
   // Fetch filter options
   useEffect(() => {
@@ -243,19 +270,37 @@ export default function AdminTimesheetPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (content) {
-        setRawTextLog(content);
-        handleImportRawText(content);
+    setImportingLog(true);
+    setBiometricSyncMsg(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/attendance/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setBiometricSyncMsg(`✅ ${data.message}`);
+        await fetchBiometricInfo();
+        await fetchTimesheet();
+      } else {
+        setBiometricSyncMsg(`❌ ${data.error || 'Lỗi khi nhập dữ liệu file chấm công'}`);
       }
-    };
-    reader.readAsText(file);
+    } catch (err: any) {
+      setBiometricSyncMsg(`❌ ${err.message || 'Lỗi xử lý file'}`);
+    } finally {
+      setImportingLog(false);
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
+    }
   };
 
   // Compute Grand Totals across all users
@@ -347,7 +392,7 @@ export default function AdminTimesheetPage() {
 
       {/* Filter Bar */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 items-center">
           {/* Month / Year */}
           <div className="flex gap-2">
             <select
@@ -402,6 +447,20 @@ export default function AdminTimesheetPage() {
             ))}
           </select>
 
+          {/* Sắp xếp (Sort By) */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-2 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            title="Thứ tự hiển thị danh sách nhân sự"
+          >
+            <option value="DEPT_NAME_ASC">🏢 Phòng ban → Tên A-B-C (Chuẩn)</option>
+            <option value="NAME_ASC">🔤 Họ &amp; Tên (A - Z)</option>
+            <option value="EMP_CODE_ASC">🔢 Mã NV (Tăng dần)</option>
+            <option value="PAYABLE_DESC">🏆 Tổng công (Cao → Thấp)</option>
+            <option value="STANDARD_DESC">🎯 Công chuẩn (Cao → Thấp)</option>
+          </select>
+
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -425,14 +484,14 @@ export default function AdminTimesheetPage() {
 
       {/* Timesheet Matrix Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
             <h2 className="text-sm font-bold text-slate-900">
-              Ma Trận Công Tháng {month}/{year}
+              Tháng {timesheetData?.month || month}/{timesheetData?.year || year}
             </h2>
-            <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
-              Công chuẩn tháng: {timesheetData?.standardWorkDays || 26} công
-            </span>
+            <div className="text-xs font-medium text-slate-500">
+              Tổng số: <strong>{timesheetData?.daysInMonth || 30} ngày</strong> • Hiển thị: <strong className="text-emerald-700">{processedMatrix.length} nhân sự</strong>
+            </div>
           </div>
           <span className="text-xs text-slate-400">
             Click vào từng ô công để xem chi tiết hoặc <strong>Điều chỉnh thủ công (Đi học)</strong>
@@ -444,7 +503,7 @@ export default function AdminTimesheetPage() {
             <span className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
             <span>Đang tổng hợp ma trận bảng công...</span>
           </div>
-        ) : timesheetData?.matrix?.length === 0 ? (
+        ) : processedMatrix.length === 0 ? (
           <div className="py-16 text-center text-xs text-slate-400">
             Không tìm thấy dữ liệu nhân sự trong tháng này.
           </div>
@@ -465,16 +524,24 @@ export default function AdminTimesheetPage() {
                   ))}
 
                   <th className="p-2.5 text-center bg-emerald-50 text-emerald-900 min-w-[80px] border-l border-slate-200 font-extrabold">
-                    TỔNG CÔNG
+                    CÔNG CHUẨN
+                  </th>
+                  <th className="p-2.5 text-center bg-emerald-100 text-emerald-900 min-w-[80px] border-l border-slate-200 font-extrabold">
+                    TỔNG CÔNG TT
+                  </th>
+                  <th className="p-2.5 text-center bg-orange-50 text-orange-900 min-w-[80px] border-l border-slate-200 font-extrabold">
+                    PC CƠM CN
                   </th>
                   <th className="p-2.5 text-right min-w-[70px]">Giờ làm</th>
                   <th className="p-2.5 text-right min-w-[65px]">Đi muộn</th>
                   <th className="p-2.5 text-right min-w-[65px]">Về sớm</th>
                   <th className="p-2.5 text-right min-w-[65px]">OT (x2)</th>
+                  <th className="p-2.5 text-right bg-blue-50 text-blue-900 min-w-[75px] font-bold">Nghỉ phép</th>
+                  <th className="p-2.5 text-right bg-blue-100 text-blue-900 min-w-[75px] font-bold">Phép còn</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {timesheetData?.matrix?.map((row: any, idx: number) => (
+                {processedMatrix.map((row: any, idx: number) => (
                   <tr key={row.user.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-2.5 text-center text-slate-400 sticky left-0 bg-white group-hover:bg-slate-50">
                       {idx + 1}
@@ -521,8 +588,14 @@ export default function AdminTimesheetPage() {
                     })}
 
                     {/* Summary Totals */}
+                    <td className="p-2.5 text-center bg-slate-50 text-slate-800 font-bold text-sm border-l border-slate-200">
+                      {row.summary.standardWorkUnits}
+                    </td>
                     <td className="p-2.5 text-center bg-emerald-50 text-emerald-800 font-black text-sm border-l border-slate-200">
                       {row.summary.finalPayableUnits}
+                    </td>
+                    <td className="p-2.5 text-center bg-orange-50 text-orange-800 font-bold text-sm border-l border-slate-200">
+                      {row.summary.sundayMealAllowance > 0 ? row.summary.sundayMealAllowance : '-'}
                     </td>
                     <td className="p-2.5 text-right font-semibold">{row.summary.totalWorkHours}h</td>
                     <td className={`p-2.5 text-right font-semibold ${row.summary.lateMinutes > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
@@ -533,6 +606,12 @@ export default function AdminTimesheetPage() {
                     </td>
                     <td className={`p-2.5 text-right font-semibold ${row.summary.otHours > 0 ? 'text-purple-600 font-bold' : 'text-slate-400'}`}>
                       {row.summary.otHours > 0 ? `+${row.summary.otHours}h` : '-'}
+                    </td>
+                    <td className="p-2.5 text-right font-semibold bg-blue-50/50 text-blue-700">
+                      {row.summary.paidLeaveDays > 0 ? `${row.summary.paidLeaveDays}` : '-'}
+                    </td>
+                    <td className="p-2.5 text-right font-semibold bg-blue-100/50 text-blue-800">
+                      {Math.max(0, (row.user.annualLeaveQuota || 0) - (row.user.annualLeaveUsed || 0))}
                     </td>
                   </tr>
                 ))}
@@ -856,11 +935,36 @@ export default function AdminTimesheetPage() {
                   </label>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
-                  <div className="font-bold text-slate-800">Cấu trúc dòng mẫu trong file:</div>
-                  <div className="font-mono bg-white p-1.5 rounded border border-slate-200 text-slate-700 text-[10px]">
-                    NV001, 2026-09-10 07:52:00<br />
-                    1 [tab] 2026-09-10 19:35:00 [tab] 1 [tab] 0 (Chuẩn máy Ronald Jack / ZKTeco)
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span className="font-bold text-slate-800">Cấu trúc file mẫu (Excel .XLSX):</span>
+                    <a href="/Mau_Import_Van_Tay.xlsx" download className="text-indigo-600 font-bold hover:underline flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
+                      <Download className="w-3.5 h-3.5" /> Tải File Mẫu
+                    </a>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-slate-200 text-slate-700 text-[10px] overflow-x-auto">
+                    <div className="font-bold border-b pb-1 mb-1 border-slate-100 flex min-w-[300px]">
+                      <span className="w-16 shrink-0">Cột 1</span>
+                      <span className="w-32 shrink-0">Cột 2</span>
+                      <span className="w-24 shrink-0">Cột 4</span>
+                      <span className="flex-1 min-w-[120px]">Cột 5</span>
+                    </div>
+                    <div className="flex text-indigo-700 font-mono mb-1 min-w-[300px]">
+                      <span className="w-16 shrink-0">MÃ NV</span>
+                      <span className="w-32 shrink-0">HỌ TÊN</span>
+                      <span className="w-24 shrink-0">NGÀY</span>
+                      <span className="flex-1 min-w-[120px]">GIỜ BẤM TAY</span>
+                    </div>
+                    <div className="flex font-mono text-slate-500 min-w-[300px]">
+                      <span className="w-16 shrink-0">NV001</span>
+                      <span className="w-32 shrink-0">Nguyễn Văn A</span>
+                      <span className="w-24 shrink-0">2026-09-14</span>
+                      <span className="flex-1 min-w-[120px]">07:52 13:30 17:35</span>
+                    </div>
+                  </div>
+                  <div className="text-[10.5px] text-amber-700 pt-1 leading-snug">
+                    *Lưu ý: Hệ thống đọc Tên Sheet là <strong>CHẤM VÂN TAY</strong> hoặc lấy Sheet đầu tiên. 
+                    Chỉ cần khớp đúng vị trí cột 1, 2, 4, 5. Các cột khác có thể bỏ trống hoặc để tùy ý.
                   </div>
                 </div>
               </div>

@@ -16,10 +16,12 @@ import {
   FileSpreadsheet,
   History,
   Layers,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  if (pathname?.startsWith('/m')) return null;
   const { user, pendingApprovalsCount } = useAuth();
 
   if (!user || pathname === '/login') return null;
@@ -42,6 +44,7 @@ export default function Sidebar() {
     { label: 'Bảng Công Tháng', href: '/admin/timesheet', icon: Table },
     { label: 'Xếp Ca & Phân Lịch', href: '/admin/schedules', icon: CalendarRange },
     { label: 'Quản Lý Nhân Sự', href: '/admin/users', icon: Users },
+    { label: 'Duyệt Xóa Phiếu', href: '/admin/delete-requests', icon: ShieldAlert },
   ];
 
   const adminNav = [
